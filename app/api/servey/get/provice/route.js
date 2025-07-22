@@ -5,7 +5,7 @@ import Province from "../../../../../models/provice";
 
 export async function GET() {
     try {
-        await connectMongoDB(); // <- ตรงนี้ต้อง connectMongoDB
+        await connectMongoDB();
         const province = await Province.find({});
         console.log("Fetched province:", province);
         return NextResponse.json(province);
