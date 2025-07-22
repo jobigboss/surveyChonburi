@@ -28,16 +28,12 @@ const SurveySchema = new mongoose.Schema({
   products: [
     {
       product_id: { type: String }, // หรือชื่อสินค้า
-      name: { type: String },
-      size: { type: String },
-      brand: { type: String },
-      owner: { type: String },
-      category: { type: String },
-      flavor: { type: String },
       status: { type: String, enum: ["available", "out_of_stock", "discontinued", "never_sold", ""] },
       priceBox: { type: Number },
       pricePack: { type: Number },
-      priceCarton: { type: Number }
+      priceCarton: { type: Number },
+      statusFMFR:{type: String},
+      statusOMG:{type: String},
     }
   ],
 
