@@ -1,6 +1,10 @@
-"use client"
-import SurveyMenu from "./components/SurveyMenuClient";
+import { Suspense } from "react";
+import SurveyMenu from "./SurveyMenu";
 
-export default function SurveyPage() {
-  return <SurveyMenu />;
+export default function Page() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <SurveyMenu />
+    </Suspense>
+  );
 }

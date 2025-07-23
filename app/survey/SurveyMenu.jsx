@@ -16,7 +16,7 @@ function SurveyMenu() {
   const searchParams = useSearchParams();
   const user_id = searchParams.get("user_id");
 
-  // กรณีไม่มี user_id ให้ redirect หรือแสดงข้อความ
+  // State สำหรับ user, loading, error
   const [user, setUser] = useState({ user_first_name: "DEMO", user_last_name: "DEMO" });
   const [loading, setLoading] = useState(!!user_id);
   const [fetchError, setFetchError] = useState("");
@@ -35,11 +35,9 @@ function SurveyMenu() {
       .finally(() => setLoading(false));
   }, [user_id]);
 
-  // --- UI ---
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#f6f8fa] px-4">
       <div className="w-full max-w-[370px] bg-white shadow-2xl rounded-[32px] p-8 flex flex-col items-center gap-4">
-
         {/* โลโก้ */}
         <img
           src="https://www.foremostthailand.com/wp-content/uploads/2022/03/footer-icon_foremost-e1648914092691.png"
