@@ -230,15 +230,17 @@ export default function SurveyWizard() {
       {step === 1 && <Step1StoreInfo data={data.store_info} onNext={handleStoreInfoNext} />}
       {step === 2 && <Step2Products data={data.products} onBack={() => setStep(1)} onNext={handleProductsNext} />}
       {step === 3 && (
-        <Step3MarketInfo
-          data={data.market_info}
-          onBack={() => setStep(2)}
-          onSubmit={submitSurvey}
-          storeInfo={data.store_info}
-          products={Array.isArray(data.products) ? data.products : data.products?.products || []}
-          userId={data.store_info?.user_id || ""}
-        />
-      )}
+      <Step3MarketInfo
+        data={data.market_info}
+        onBack={() => setStep(2)}
+        onSubmit={submitSurvey}
+        storeInfo={data.store_info}
+        products={Array.isArray(data.products) ? data.products : data.products?.products || []}
+        userId={data.store_info?.user_id || ""}
+        statusFMFRGlobal={data.statusFMFR}      // <<--- ส่งค่าไปด้วย
+        statusOMGGlobal={data.statusOMG}        // <<--- ส่งค่าไปด้วย
+      />
+    )}
 
       {/* === Success Popup Dialog === */}
       <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
@@ -253,7 +255,7 @@ export default function SurveyWizard() {
             <Button
               className="w-full"
               onClick={() => {
-                router.push(`/survey?user_id=${userIdSuccess || "demo"}`);
+                router.push(`/survey?user_id=${userIdSuccess}`);
                 setShowSuccess(false);
               }}
             >

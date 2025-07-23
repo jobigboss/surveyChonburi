@@ -36,6 +36,8 @@ export default function Step3MarketInfo({
   onSubmit,
   data = {},
   productList = defaultProductList,
+  statusFMFRGlobal = "",
+  statusOMGGlobal = "",
 }) {
   // State หลัก
   const [marketInfo, setMarketInfo] = useState({
@@ -56,16 +58,18 @@ export default function Step3MarketInfo({
   const isValidPhone = (phone) => /^0[0-9]{8,9}$/.test(phone);
   const needContact = marketInfo.demand === "buy";
 
-  // ปรับใหม่ ไม่บังคับกรอกจำนวนสินค้า
+  // Logic: ต้องกรอก reason ไหม
+  const shouldShowReason =
+    ["มีขาย", "สินค้าหมด"].includes(statusFMFRGlobal) ||
+    ["มีขาย", "สินค้าหมด"].includes(statusOMGGlobal);
+
+  // ปุ่มส่งต้องเลือก radio ด้วย
   const disableSubmit =
     submitting ||
+    !marketInfo.demand || // ต้องเลือก radio ก่อน!
     (needContact && (!marketInfo.contact || !isValidPhone(marketInfo.phone))) ||
-    !userId;
-
-  // แจ้งเตือนกรณีไม่กรอกจำนวนสินค้าเลย (แค่เตือน ไม่บล็อก)
-  const showQtyWarning = marketInfo.interest_products.every(
-    (p) => !p.qty || Number(p.qty) === 0
-  );
+    !userId ||
+    (shouldShowReason && !marketInfo.reason);
 
   // Handle change qty
   const handleQtyChange = (idx, value) => {
@@ -73,17 +77,6 @@ export default function Step3MarketInfo({
     updated[idx].qty = value !== "" ? Number(value) : "";
     setMarketInfo({ ...marketInfo, interest_products: updated });
   };
-
-  // Mapping products ให้อยู่ใน schema backend
-  const mappedProducts = products.map((prod) => ({
-    product_id: prod.fmProID || prod.product_id || "",
-    status: prod.status || "",
-    priceBox: Number(prod.priceBox) || 0,
-    pricePack: Number(prod.pricePack) || 0,
-    priceCarton: Number(prod.priceCarton) || 0,
-    statusFMFR: prod.statusFMFR || "",
-    statusOMG: prod.statusOMG || "",
-  }));
 
   // Mapping interest_products
   const mappedInterestProducts = marketInfo.interest_products.map((item) => ({
@@ -109,6 +102,7 @@ export default function Step3MarketInfo({
       // สร้าง market_info payload
       const marketPayload = {
         ...marketInfo,
+        reason: shouldShowReason ? marketInfo.reason : "",
         interest_products: mappedInterestProducts,
       };
 
@@ -142,40 +136,42 @@ export default function Step3MarketInfo({
       {success && <div className="mb-4 text-green-600 text-center">{success}</div>}
 
       {/* ที่มาของสินค้า */}
-      <div className="mb-6">
-        <label
-          htmlFor="market-reason"
-          className="font-semibold text-gray-700 mb-2 block"
-        >
-          ที่มาของสินค้า{" "}
-          <span className="font-normal text-xs text-gray-400">
-            (กรณีมีขาย / สินค้าหมด)
-          </span>
-        </label>
-        <Select
-          value={marketInfo.reason}
-          onValueChange={(val) =>
-            setMarketInfo({ ...marketInfo, reason: val })
-          }
-          required
-          id="market-reason"
-        >
-          <SelectTrigger className="w-full rounded-xl border-2 px-4 py-3 bg-white shadow focus:ring-2 focus:ring-blue-100 text-base">
-            <SelectValue placeholder="กรุณาระบุที่มาของสินค้า" />
-          </SelectTrigger>
-          <SelectContent className="max-h-72 rounded-xl shadow-lg border p-0 text-base">
-            {sources.map((item) => (
-              <SelectItem
-                key={item.value}
-                value={item.value}
-                className="cursor-pointer px-4 py-2 text-gray-700 data-[state=checked]:bg-blue-100 data-[state=checked]:text-blue-700 rounded-lg"
-              >
-                {item.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {shouldShowReason && (
+        <div className="mb-6">
+          <label
+            htmlFor="market-reason"
+            className="font-semibold text-gray-700 mb-2 block"
+          >
+            ที่มาของสินค้า{" "}
+            <span className="font-normal text-xs text-gray-400">
+              (กรณีมีขาย / สินค้าหมด)
+            </span>
+          </label>
+          <Select
+            value={marketInfo.reason}
+            onValueChange={(val) =>
+              setMarketInfo({ ...marketInfo, reason: val })
+            }
+            required={shouldShowReason}
+            id="market-reason"
+          >
+            <SelectTrigger className="w-full rounded-xl border-2 px-4 py-3 bg-white shadow focus:ring-2 focus:ring-blue-100 text-base">
+              <SelectValue placeholder="กรุณาระบุที่มาของสินค้า" />
+            </SelectTrigger>
+            <SelectContent className="max-h-72 rounded-xl shadow-lg border p-0 text-base">
+              {sources.map((item) => (
+                <SelectItem
+                  key={item.value}
+                  value={item.value}
+                  className="cursor-pointer px-4 py-2 text-gray-700 data-[state=checked]:bg-blue-100 data-[state=checked]:text-blue-700 rounded-lg"
+                >
+                  {item.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       <div className="mb-10 space-y-4">
         <div>
@@ -300,11 +296,6 @@ export default function Step3MarketInfo({
             </div>
           ))}
         </div>
-        {showQtyWarning && (
-          <div className="mt-3 text-xs text-yellow-600 text-center">
-            * แนะนำให้กรอกจำนวนสินค้าอย่างน้อย 1 รายการ
-          </div>
-        )}
       </div>
 
       {/* ปุ่ม */}

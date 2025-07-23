@@ -15,6 +15,28 @@ export default function Step2Products({ onBack, onNext }) {
   const [statusFMFRGlobal, setStatusFMFRGlobal] = useState("");
   const [statusOMGGlobal, setStatusOMGGlobal] = useState("");
 
+  // ตัวเลือกทั้งหมด
+  const statusOptions = [
+    { value: "", label: "เลือกสถานะ" },
+    { value: "สินค้าหมด", label: "สินค้าหมด" },
+    { value: "ไม่เคยขาย", label: "ไม่เคยขาย" },
+    { value: "เลิกขาย", label: "เลิกขาย" },
+  ];
+
+  // Filter FMFR options ตาม OMG ที่เลือก
+  const getFMFROptions = (omgStatus) => {
+    if (omgStatus === "สินค้าหมด") {
+      return statusOptions.filter(opt => opt.value === "" || opt.value === "สินค้าหมด");
+    }
+    if (omgStatus === "ไม่เคยขาย") {
+      return statusOptions.filter(opt => ["", "สินค้าหมด", "ไม่เคยขาย", "เลิกขาย"].includes(opt.value));
+    }
+    if (omgStatus === "เลิกขาย") {
+      return statusOptions.filter(opt => ["", "สินค้าหมด", "เลิกขาย"].includes(opt.value));
+    }
+    return statusOptions;
+  };
+
   // ดึงข้อมูลสินค้า
   useEffect(() => {
     setLoading(true);
@@ -44,15 +66,32 @@ export default function Step2Products({ onBack, onNext }) {
       .finally(() => setLoading(false));
   }, []);
 
-  // Toggle สถานะ มีขาย/ไม่มีขาย
+  // Toggle สถานะ มีขาย/ไม่มีขาย + reset ราคาถ้าเป็น "ไม่มีขาย"
   const toggleStatus = (productId) => {
-    setProductData((prev) => ({
-      ...prev,
-      [productId]: {
-        ...prev[productId],
-        status: prev[productId]?.status === "มีขาย" ? "ไม่มีขาย" : "มีขาย",
-      },
-    }));
+    setProductData((prev) => {
+      const currentStatus = prev[productId]?.status;
+      if (currentStatus === "มีขาย") {
+        // กลับเป็น "ไม่มีขาย" => ล้างราคา
+        return {
+          ...prev,
+          [productId]: {
+            ...prev[productId],
+            status: "ไม่มีขาย",
+            priceBox: "",
+            pricePack: "",
+            priceCarton: "",
+          },
+        };
+      }
+      // เปลี่ยนเป็น "มีขาย" ราคารอบก่อนจะยังอยู่ (ถ้าเคยกรอก)
+      return {
+        ...prev,
+        [productId]: {
+          ...prev[productId],
+          status: "มีขาย",
+        },
+      };
+    });
   };
 
   // ใส่ราคาสินค้า (เฉพาะ FMFR ที่มีขาย)
@@ -65,15 +104,6 @@ export default function Step2Products({ onBack, onNext }) {
       },
     }));
   };
-
-  // Status options (เพิ่ม "มีสินค้า" ให้เลือกได้เอง)
-  const statusOptions = [
-    { value: "", label: "เลือกสถานะ" },
-    { value: "มีสินค้า", label: "มีสินค้า" },
-    { value: "สินค้าหมด", label: "สินค้าหมด" },
-    { value: "ไม่เคยขาย", label: "ไม่เคยขาย" },
-    { value: "เลิกขาย", label: "เลิกขาย" },
-  ];
 
   // เช็คเงื่อนไข auto set
   const isAnyFMFRAvailable = products.some(
@@ -96,6 +126,14 @@ export default function Step2Products({ onBack, onNext }) {
     if (isAnyFMFRKidsAvailable) setStatusOMGGlobal("มีขาย");
     else setStatusOMGGlobal("");
   }, [isAnyFMFRKidsAvailable]);
+
+  // ถ้า FMFR dropdown เหลือแค่บาง option แต่ค่าที่เลือกไว้ก่อนหน้าไม่ตรง option ให้ reset อัตโนมัติ
+  useEffect(() => {
+    const availableFMFROptions = getFMFROptions(statusOMGGlobal).map(o => o.value);
+    if (!availableFMFROptions.includes(statusFMFRGlobal)) {
+      setStatusFMFRGlobal("");
+    }
+  }, [statusOMGGlobal]);
 
   // Submit handler
   const handleNext = () => {
@@ -218,13 +256,32 @@ export default function Step2Products({ onBack, onNext }) {
         })}
       </div>
 
+      {/* OMG Dropdown (ซ่อนถ้า FMFR + Kids ถูกเลือกมีขาย) */}
+      {!isAnyFMFRKidsAvailable && (
+        <div>
+          <label htmlFor="statusOMGGlobal" className="text-sm font-semibold mb-1 block">
+            สถานะสินค้า OMG
+          </label>
+          <select
+            id="statusOMGGlobal"
+            className="border rounded-xl p-3 text-base w-full focus:ring-2 focus:ring-primary/30"
+            value={statusOMGGlobal}
+            onChange={e => setStatusOMGGlobal(e.target.value)}
+          >
+            {statusOptions.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {/* --- Global Status Dropdown (ด้านล่าง) --- */}
       <div className="grid grid-cols-1 gap-4 mb-6">
         {/* FMFR Dropdown */}
         {!isAnyFMFRAvailable && (
           <div>
             <label htmlFor="statusFMFRGlobal" className="text-sm font-semibold mb-1 block">
-              สถานะสินค้า FMFR (เลือก 1 เดียว)
+              สถานะสินค้า FMFR
             </label>
             <select
               id="statusFMFRGlobal"
@@ -232,25 +289,7 @@ export default function Step2Products({ onBack, onNext }) {
               value={statusFMFRGlobal}
               onChange={e => setStatusFMFRGlobal(e.target.value)}
             >
-              {statusOptions.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-          </div>
-        )}
-        {/* OMG Dropdown (ซ่อนถ้า FMFR + Kids ถูกเลือกมีขาย) */}
-        {!isAnyFMFRKidsAvailable && (
-          <div>
-            <label htmlFor="statusOMGGlobal" className="text-sm font-semibold mb-1 block">
-              สถานะสินค้า OMG (เลือก 1 เดียว)
-            </label>
-            <select
-              id="statusOMGGlobal"
-              className="border rounded-xl p-3 text-base w-full focus:ring-2 focus:ring-primary/30"
-              value={statusOMGGlobal}
-              onChange={e => setStatusOMGGlobal(e.target.value)}
-            >
-              {statusOptions.map(opt => (
+              {getFMFROptions(statusOMGGlobal).map(opt => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
             </select>

@@ -29,30 +29,26 @@ const SPECIAL_TYPE = [
 ];
 
 // ----- PROVINCE DROPDOWN -----
-function ProvinceDropdown({ storeInfo, setStoreInfo }) {
+function ProvinceDropdown({ storeInfo, setStoreInfo, userId }) {
   const [provinces, setProvinces] = useState([]);
   const [districts, setDistricts] = useState([]);
   const [subdistricts, setSubdistricts] = useState([]);
   const [postcode, setPostcode] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [userRoute, setUserRoute] = useState("");
 
-  // Mock fallback data
-  const MOCK_PROVINCE = useMemo(() => [
-    {
-      province: "กรุงเทพมหานคร",
-      districts: [
-        { district: "บางรัก", subdistricts: [{ subdistrict: "บางรัก", postcode: "10500" }, { subdistrict: "สีลม", postcode: "10500" }] },
-        { district: "ปทุมวัน", subdistricts: [{ subdistrict: "วังใหม่", postcode: "10330" }] }
-      ]
-    },
-    {
-      province: "เชียงใหม่",
-      districts: [
-        { district: "เมืองเชียงใหม่", subdistricts: [{ subdistrict: "พระสิงห์", postcode: "50200" }] }
-      ]
-    }
-  ], []);
+  useEffect(() => {
+    if (!userId) return;
+    fetch(`/api/servey/get/user?user_id=${userId}`)
+      .then((res) => res.json())
+      .then((users) => {
+        const found = Array.isArray(users)
+          ? users.find((u) => u.user_id === userId)
+          : users;
+        if (found?.route) setUserRoute(String(found.route).replace(",", ""));
+      });
+  }, [userId]);
 
   useEffect(() => {
     setLoading(true);
@@ -64,31 +60,34 @@ function ProvinceDropdown({ storeInfo, setStoreInfo }) {
         try { data = JSON.parse(text); }
         catch { throw new Error("API response is not JSON"); }
         if (Array.isArray(data) && data[0]?.sub_district) {
+          let filtered = data;
+          if (userRoute) filtered = data.filter((p) => (p.Route || p.route) === userRoute);
           const provincesObj = {};
-          data.forEach(({ province, district, sub_district, postcode }) => {
+          filtered.forEach(({ province, district, sub_district, postcode }) => {
             if (!province || !district || !sub_district) return;
             if (!provincesObj[province]) provincesObj[province] = {};
             if (!provincesObj[province][district]) provincesObj[province][district] = [];
             provincesObj[province][district].push({ subdistrict: sub_district, postcode });
           });
-          return Object.entries(provincesObj).map(([province, districtsObj]) => ({
+          const provincesList = Object.entries(provincesObj).map(([province, districtsObj]) => ({
             province,
             districts: Object.entries(districtsObj).map(([district, subdistricts]) => ({
               district,
               subdistricts,
             })),
           }));
+          return provincesList;
         }
         if (Array.isArray(data)) return data;
         throw new Error("API format invalid");
       })
       .then(setProvinces)
       .catch(err => {
-        setError("API province error: " + err.message + " (ใช้ mock data)");
-        setProvinces(MOCK_PROVINCE);
+        setError("API province error: " + err.message);
+        setProvinces([]);
       })
       .finally(() => setLoading(false));
-  }, [MOCK_PROVINCE]);
+  }, [userRoute]);
 
   useEffect(() => {
     const foundProvince = provinces.find(p => p.province === storeInfo.store_province);
@@ -391,19 +390,22 @@ export default function Step1StoreInfo({ data = {}, onNext }) {
   };
 
   const isNextDisabled =
-    geoLoading ||
-    !storeInfo.store_name ||
-    !storeInfo.store_province ||
-    !storeInfo.store_district ||
-    !storeInfo.store_subdistrict ||
-    !storeInfo.photo_store ||
-    !storeInfo.lat ||
-    !storeInfo.lng ||
-    !storeInfo.shop_size ||
-    !storeInfo.store_freezer ||
-    (storeInfo.store_freezer === "มี" && !storeInfo.photo_freezer) ||
-    !storeInfo.store_shelf ||
-    (storeInfo.store_shelf === "มี" && !storeInfo.photo_shelf);
+  geoLoading ||
+  !storeInfo.store_name ||
+  !storeInfo.store_province ||
+  !storeInfo.store_district ||
+  !storeInfo.store_subdistrict ||
+  !storeInfo.photo_store ||
+  !storeInfo.lat ||
+  !storeInfo.lng ||
+  !storeInfo.shop_size ||
+  !storeInfo.store_freezer ||
+  (storeInfo.store_freezer === "มี" && !storeInfo.photo_freezer) ||
+  !storeInfo.store_shelf ||
+  (storeInfo.store_shelf === "มี" && !storeInfo.photo_shelf) ||
+  // เพิ่มบรรทัดนี้!
+  (storeInfo.store_freezer === "ไม่มี" && storeInfo.store_shelf === "ไม่มี");
+
 
   const handleSelectFreezer = (opt) => {
     setStoreInfo(prev => ({
@@ -471,7 +473,11 @@ export default function Step1StoreInfo({ data = {}, onNext }) {
           onChange={v => setStoreInfo({ ...storeInfo, store_number_moo: v })}
         />
 
-        <ProvinceDropdown storeInfo={storeInfo} setStoreInfo={setStoreInfo} />
+        <ProvinceDropdown
+          storeInfo={storeInfo}
+          setStoreInfo={setStoreInfo}
+          userId={userIdFromQuery}
+        />
 
         <FormUpload
           label={storeInfo.photo_store ? "รูปร้านค้า" : "ถ่ายรูปร้านค้า"}
@@ -484,12 +490,13 @@ export default function Step1StoreInfo({ data = {}, onNext }) {
 
         {storeInfo.photo_store && (
           <>
-            <FormInput
+            {/* ช่องนี้ถูกซ่อน (แต่ค่าถูกเก็บ auto) */}
+            {/* <FormInput
               label="ที่ตั้งร้าน/รายละเอียดสถานที่"
               value={storeInfo.location_address}
               onChange={v => setStoreInfo({ ...storeInfo, location_address: v })}
               readOnly
-            />
+            /> */}
             <div className="flex gap-2">
               <FormInput
                 label="Latitude"
