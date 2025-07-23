@@ -1,13 +1,10 @@
-"use client"
-import React from 'react';
-import SurveyWizard from './components/SurveyWizard';
+import { Suspense } from "react";
+import PermissionPage from "./PermissionPage";
 
-function PermissionPage() {
+export default function Page() {
   return (
-    <div>
-      <SurveyWizard/>
-    </div>
-  )
+    <Suspense fallback={<div>Loading...</div>}>
+      <PermissionPage />
+    </Suspense>
+  );
 }
-
-export default PermissionPage
