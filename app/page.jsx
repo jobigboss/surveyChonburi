@@ -2,7 +2,6 @@
 import React, { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useSearchParams } from "next/navigation";
 
 const foremostBlue = "#0094E5";
 const foremostOrange = "#FF9100";

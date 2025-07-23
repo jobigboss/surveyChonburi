@@ -4,31 +4,42 @@ import Link from "next/link";
 import { LogOut } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
-const foremostBlue = "#0094E5";
-const foremostOrange = "#FF9100";
-const darkText = "#222";
-const logoutRed = "#D32F2F";
+const COLORS = {
+  blue: "#0094E5",
+  orange: "#FF9100",
+  dark: "#222",
+  gray: "#ececec",
+  logout: "#D32F2F",
+};
 
 function SurveyMenu() {
   const searchParams = useSearchParams();
   const user_id = searchParams.get("user_id");
 
-  // ตัวอย่าง user mock (เปลี่ยน logic เป็น fetch user จริงในโปรดักชัน)
+  // กรณีไม่มี user_id ให้ redirect หรือแสดงข้อความ
   const [user, setUser] = useState({ user_first_name: "DEMO", user_last_name: "DEMO" });
+  const [loading, setLoading] = useState(!!user_id);
+  const [fetchError, setFetchError] = useState("");
 
   useEffect(() => {
     if (!user_id) return;
-    const fetchUser = async () => {
-      const res = await fetch(`/api/servey/get/user?user_id=${user_id}`);
-      const data = await res.json();
-      setUser(data[0] || {});
-    };
-    fetchUser();
+    setLoading(true);
+    setFetchError("");
+    fetch(`/api/servey/get/user?user_id=${user_id}`)
+      .then(async (res) => {
+        if (!res.ok) throw new Error("โหลดข้อมูลผู้ใช้ไม่สำเร็จ");
+        const data = await res.json();
+        setUser(data?.[0] || { user_first_name: "Unknown", user_last_name: "" });
+      })
+      .catch((err) => setFetchError(err.message))
+      .finally(() => setLoading(false));
   }, [user_id]);
 
+  // --- UI ---
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#f6f8fa] px-4">
       <div className="w-full max-w-[370px] bg-white shadow-2xl rounded-[32px] p-8 flex flex-col items-center gap-4">
+
         {/* โลโก้ */}
         <img
           src="https://www.foremostthailand.com/wp-content/uploads/2022/03/footer-icon_foremost-e1648914092691.png"
@@ -37,15 +48,20 @@ function SurveyMenu() {
           draggable={false}
         />
 
-        {/* ชื่อผู้ใช้ */}
-        <div className="text-center mt-2 mb-1 min-h-[28px]">
-          <span className="text-base font-medium" style={{ color: foremostBlue }}>
-            {user.user_first_name} {user.user_last_name}
-          </span>
+        {/* ชื่อผู้ใช้ / Loading / Error */}
+        <div className="text-center mt-2 mb-1 min-h-[28px] h-7 flex items-center justify-center">
+          {loading ? (
+            <span className="text-sm text-gray-400 animate-pulse">กำลังโหลดข้อมูล...</span>
+          ) : fetchError ? (
+            <span className="text-sm text-red-500">{fetchError}</span>
+          ) : (
+            <span className="text-base font-medium" style={{ color: COLORS.blue }}>
+              {user.user_first_name} {user.user_last_name}
+            </span>
+          )}
         </div>
 
-        {/* หัวข้อ */}
-        <h1 className="text-lg font-bold text-center mb-2 tracking-wide" style={{ color: darkText }}>
+        <h1 className="text-lg font-bold text-center mb-2 tracking-wide" style={{ color: COLORS.dark }}>
           เมนูแบบสอบถามร้านค้า
         </h1>
 
@@ -56,17 +72,20 @@ function SurveyMenu() {
               pathname: "/survey/permission",
               query: { result: "อนุญาต", user_id }
             }}
-            className="
+            className={`
               w-full py-3 rounded-2xl
               text-base font-semibold text-white text-center
               shadow-md hover:scale-[1.03] active:scale-100
               transition-all duration-150
-            "
+              ${!user_id ? "pointer-events-none opacity-50" : ""}
+            `}
             style={{
-              backgroundColor: foremostBlue,
-              border: `2px solid ${foremostBlue}`,
+              backgroundColor: COLORS.blue,
+              border: `2px solid ${COLORS.blue}`,
               letterSpacing: "0.5px",
             }}
+            aria-disabled={!user_id}
+            tabIndex={!user_id ? -1 : 0}
           >
             อนุญาต
           </Link>
@@ -75,17 +94,20 @@ function SurveyMenu() {
               pathname: "/survey/permission_no",
               query: { result: "ไม่อนุญาต", user_id }
             }}
-            className="
+            className={`
               w-full py-3 rounded-2xl
               text-base font-semibold text-white text-center
               shadow-md hover:scale-[1.03] active:scale-100
               transition-all duration-150
-            "
+              ${!user_id ? "pointer-events-none opacity-50" : ""}
+            `}
             style={{
-              backgroundColor: foremostOrange,
-              border: `2px solid ${foremostOrange}`,
+              backgroundColor: COLORS.orange,
+              border: `2px solid ${COLORS.orange}`,
               letterSpacing: "0.5px",
             }}
+            aria-disabled={!user_id}
+            tabIndex={!user_id ? -1 : 0}
           >
             ไม่อนุญาต
           </Link>
@@ -94,17 +116,20 @@ function SurveyMenu() {
               pathname: "/survey/dashboard_emp",
               query: { user_id }
             }}
-            className="
+            className={`
               w-full py-3 rounded-2xl
               text-base font-semibold text-gray-700 text-center
               shadow-md hover:scale-[1.03] hover:bg-gray-300 transition-all
-            "
+              ${!user_id ? "pointer-events-none opacity-50" : ""}
+            `}
             style={{
-              backgroundColor: "#ececec",
-              color: darkText,
-              border: "2px solid #ececec",
+              backgroundColor: COLORS.gray,
+              color: COLORS.dark,
+              border: `2px solid ${COLORS.gray}`,
               letterSpacing: "0.5px",
             }}
+            aria-disabled={!user_id}
+            tabIndex={!user_id ? -1 : 0}
           >
             สรุปงาน
           </Link>
@@ -114,7 +139,7 @@ function SurveyMenu() {
         <div className="w-full mt-3">
           <Link
             href="/"
-            className="
+            className={`
               w-full flex items-center justify-center gap-2
               py-3 rounded-2xl
               text-base font-semibold text-white text-center
@@ -122,9 +147,9 @@ function SurveyMenu() {
               hover:bg-[#ba2424] active:scale-[0.98]
               focus-visible:ring-2 focus-visible:ring-[#D32F2F] focus:outline-none
               transition-all duration-150
-            "
+            `}
             style={{
-              border: `2px solid ${logoutRed}`,
+              border: `2px solid ${COLORS.logout}`,
               letterSpacing: "0.5px",
             }}
           >
@@ -132,6 +157,14 @@ function SurveyMenu() {
             ออกจากระบบ
           </Link>
         </div>
+
+        {/* กรณีไม่มี user_id */}
+        {!user_id && (
+          <div className="text-center text-red-500 text-xs mt-3">
+            <b>ไม่พบ user_id ใน url</b><br />
+            กรุณาเข้าผ่านลิงก์ที่ถูกต้อง หรือ ติดต่อแอดมิน
+          </div>
+        )}
       </div>
     </div>
   );
