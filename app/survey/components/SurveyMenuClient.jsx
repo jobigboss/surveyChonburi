@@ -9,17 +9,16 @@ const foremostOrange = "#FF9100";
 const darkText = "#222";
 const logoutRed = "#D32F2F";
 
-function SurveyMenu() {
+export default function SurveyMenuClient() {  // <-- export default ต้องชื่อเดียวกับไฟล์
   const searchParams = useSearchParams();
   const user_id = searchParams.get("user_id");
 
-  // ตัวอย่าง user mock (เปลี่ยน logic เป็น fetch user จริงในโปรดักชัน)
   const [user, setUser] = useState({ user_first_name: "DEMO", user_last_name: "DEMO" });
 
   useEffect(() => {
     if (!user_id) return;
     const fetchUser = async () => {
-      const res = await fetch(`/api/servey/get/user?user_id=${user_id}`);
+      const res = await fetch(`/api/survey/get/user?user_id=${user_id}`); // แก้ servey -> survey
       const data = await res.json();
       setUser(data[0] || {});
     };
@@ -56,12 +55,7 @@ function SurveyMenu() {
               pathname: "/survey/permission",
               query: { result: "อนุญาต", user_id }
             }}
-            className="
-              w-full py-3 rounded-2xl
-              text-base font-semibold text-white text-center
-              shadow-md hover:scale-[1.03] active:scale-100
-              transition-all duration-150
-            "
+            className="w-full py-3 rounded-2xl text-base font-semibold text-white text-center shadow-md hover:scale-[1.03] active:scale-100 transition-all duration-150"
             style={{
               backgroundColor: foremostBlue,
               border: `2px solid ${foremostBlue}`,
@@ -75,12 +69,7 @@ function SurveyMenu() {
               pathname: "/survey/permission_no",
               query: { result: "ไม่อนุญาต", user_id }
             }}
-            className="
-              w-full py-3 rounded-2xl
-              text-base font-semibold text-white text-center
-              shadow-md hover:scale-[1.03] active:scale-100
-              transition-all duration-150
-            "
+            className="w-full py-3 rounded-2xl text-base font-semibold text-white text-center shadow-md hover:scale-[1.03] active:scale-100 transition-all duration-150"
             style={{
               backgroundColor: foremostOrange,
               border: `2px solid ${foremostOrange}`,
@@ -94,11 +83,7 @@ function SurveyMenu() {
               pathname: "/survey/dashboard_emp",
               query: { user_id }
             }}
-            className="
-              w-full py-3 rounded-2xl
-              text-base font-semibold text-gray-700 text-center
-              shadow-md hover:scale-[1.03] hover:bg-gray-300 transition-all
-            "
+            className="w-full py-3 rounded-2xl text-base font-semibold text-gray-700 text-center shadow-md hover:scale-[1.03] hover:bg-gray-300 transition-all"
             style={{
               backgroundColor: "#ececec",
               color: darkText,
@@ -114,15 +99,7 @@ function SurveyMenu() {
         <div className="w-full mt-3">
           <Link
             href="/"
-            className="
-              w-full flex items-center justify-center gap-2
-              py-3 rounded-2xl
-              text-base font-semibold text-white text-center
-              shadow-md bg-[#D32F2F] hover:scale-[1.03]
-              hover:bg-[#ba2424] active:scale-[0.98]
-              focus-visible:ring-2 focus-visible:ring-[#D32F2F] focus:outline-none
-              transition-all duration-150
-            "
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-base font-semibold text-white text-center shadow-md bg-[#D32F2F] hover:scale-[1.03] hover:bg-[#ba2424] active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[#D32F2F] focus:outline-none transition-all duration-150"
             style={{
               border: `2px solid ${logoutRed}`,
               letterSpacing: "0.5px",
@@ -136,5 +113,3 @@ function SurveyMenu() {
     </div>
   );
 }
-
-export default SurveyMenu;
