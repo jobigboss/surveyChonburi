@@ -1,4 +1,6 @@
-import SurveyMenu from "./components/SurveyMenu ";
+"use client";
+
+import SurveyMenu from "./components/SurveyMenu";
 
 export default function SurveyPage() {
   return <SurveyMenu />;
