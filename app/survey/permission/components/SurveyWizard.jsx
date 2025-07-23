@@ -1,8 +1,11 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Step1StoreInfo from "./Store";
 import Step2Products from "./Product";
 import Step3MarketInfo from "./Marketing";
+import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 export default function SurveyWizard() {
   const [step, setStep] = useState(1);
@@ -15,76 +18,77 @@ export default function SurveyWizard() {
     surID: "",
   });
 
+  // เพิ่ม state เก็บ user_id ที่สำเร็จ
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successSurID, setSuccessSurID] = useState("");
+  const [userIdSuccess, setUserIdSuccess] = useState("");
+  const router = useRouter();
+
   // ฟังก์ชันอัปโหลดรูปภาพขึ้น S3 ผ่าน presigned URL
- const uploadImageToS3 = async (file, surID, type) => {
-  // ตั้งชื่อไฟล์ใหม่โดยไม่เอาชื่อเดิมเลย
-  const filename = `${surID}_${type}.jpg`; // หรือ .jpeg ตามต้องการ
+  const uploadImageToS3 = async (file, surID, type) => {
+    const filename = `${surID}_${type}.jpg`;
+    const presignRes = await fetch("/api/servey/upload", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filename, contentType: "image/jpeg" }),
+    });
 
-  const presignRes = await fetch("/api/servey/upload", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ filename, contentType: "image/jpeg" }), // กำหนด Content-Type เป็น jpeg
-  });
+    const presignData = await presignRes.json();
+    if (!presignRes.ok) {
+      console.error("[uploadImageToS3] presign error:", presignData.error);
+      throw new Error(presignData.error || "Failed to get presigned URL");
+    }
 
-  const presignData = await presignRes.json();
-  if (!presignRes.ok) {
-    console.error("[uploadImageToS3] presign error:", presignData.error);
-    throw new Error(presignData.error || "Failed to get presigned URL");
+    let uploadFile = file;
+    if (file.type !== "image/jpeg") {
+      uploadFile = await convertFileToJpeg(file);
+    }
+
+    const uploadRes = await fetch(presignData.url, {
+      method: "PUT",
+      headers: { "Content-Type": "image/jpeg" },
+      body: uploadFile,
+    });
+    if (!uploadRes.ok) {
+      console.error("[uploadImageToS3] upload failed", uploadRes.statusText);
+      throw new Error("Upload to S3 failed");
+    }
+
+    const url = `https://${process.env.NEXT_PUBLIC_AWS_S3_BUCKET_NAME}.s3.${process.env.NEXT_PUBLIC_AWS_REGION}.amazonaws.com/${presignData.key}`;
+    console.log("[uploadImageToS3] file url:", url);
+    return url;
+  };
+
+  // แปลงไฟล์รูปเป็น JPEG Blob
+  async function convertFileToJpeg(file) {
+    return new Promise((resolve, reject) => {
+      const img = new window.Image();
+      const reader = new window.FileReader();
+
+      reader.onload = () => {
+        img.src = reader.result;
+      };
+
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0);
+        canvas.toBlob(
+          (blob) => {
+            if (blob) resolve(blob);
+            else reject(new Error("Failed to convert to JPEG"));
+          },
+          "image/jpeg",
+          0.95
+        );
+      };
+
+      reader.onerror = (err) => reject(err);
+      reader.readAsDataURL(file);
+    });
   }
-
-  // แปลงไฟล์เป็น JPEG Blob (ถ้าไฟล์ต้นฉบับไม่ใช่ JPEG)
-  let uploadFile = file;
-  if (file.type !== "image/jpeg") {
-    uploadFile = await convertFileToJpeg(file);
-  }
-
-  const uploadRes = await fetch(presignData.url, {
-    method: "PUT",
-    headers: { "Content-Type": "image/jpeg" },
-    body: uploadFile,
-  });
-  if (!uploadRes.ok) {
-    console.error("[uploadImageToS3] upload failed", uploadRes.statusText);
-    throw new Error("Upload to S3 failed");
-  }
-
-  const url = `https://${process.env.NEXT_PUBLIC_AWS_S3_BUCKET_NAME}.s3.${process.env.NEXT_PUBLIC_AWS_REGION}.amazonaws.com/${presignData.key}`;
-  console.log("[uploadImageToS3] file url:", url);
-  return url;
-};
-
-// ฟังก์ชันช่วยแปลงไฟล์รูปเป็น JPEG Blob
-async function convertFileToJpeg(file) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const reader = new FileReader();
-
-    reader.onload = () => {
-      img.src = reader.result;
-    };
-
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(img, 0, 0);
-      canvas.toBlob(
-        (blob) => {
-          if (blob) resolve(blob);
-          else reject(new Error("Failed to convert to JPEG"));
-        },
-        "image/jpeg",
-        0.95
-      );
-    };
-
-    reader.onerror = (err) => reject(err);
-    reader.readAsDataURL(file);
-  });
-}
-
-
 
   // Step1: เก็บ store_info
   const handleStoreInfoNext = (val) => {
@@ -131,7 +135,6 @@ async function convertFileToJpeg(file) {
 
     // 2. อัปโหลดรูปภาพแต่ละประเภท (ถ้าเป็น File)
     const storeInfo = { ...data.store_info };
-
     try {
       if (storeInfo.photo_store instanceof File) {
         storeInfo.photo_store = await uploadImageToS3(storeInfo.photo_store, surID, "store");
@@ -170,14 +173,19 @@ async function convertFileToJpeg(file) {
       });
       const json = await res.json();
       if (json.success) {
-        if (window?.navigator?.clipboard) {
-          await navigator.clipboard.writeText(surID);
-          alert(`ส่งแบบสอบถามเรียบร้อย!\nรหัสแบบสอบถาม: ${surID}\n\n(คัดลอกให้แล้ว)`);
-        } else {
-          window.prompt("รหัสแบบสอบถาม (copy):", surID);
-        }
+        setSuccessSurID(surID);
+        setUserIdSuccess(userId);
+        setShowSuccess(true);
         setStep(1);
-        setData({ store_info: {}, products: [], market_info: {}, statusFMFR: "", statusOMG: "", surID: "" });
+        setData({
+          store_info: {},
+          products: [],
+          market_info: {},
+          statusFMFR: "",
+          statusOMG: "",
+          surID: "",
+        });
+        // ไม่ต้อง alert หรือ prompt แล้ว
       } else {
         alert("เกิดข้อผิดพลาด: " + json.error);
       }
@@ -186,11 +194,39 @@ async function convertFileToJpeg(file) {
     }
   };
 
+  // Blur ด้านหลังตอน showSuccess
+  useEffect(() => {
+    if (showSuccess) {
+      document.body.classList.add("overflow-hidden");
+      document.getElementById("survey-blur-bg")?.classList.remove("hidden");
+    } else {
+      document.body.classList.remove("overflow-hidden");
+      document.getElementById("survey-blur-bg")?.classList.add("hidden");
+    }
+    return () => {
+      document.body.classList.remove("overflow-hidden");
+      document.getElementById("survey-blur-bg")?.classList.add("hidden");
+    };
+  }, [showSuccess]);
+
+  // copy รหัสให้อัตโนมัติเมื่อ popup โชว์
+  useEffect(() => {
+    if (showSuccess && successSurID) {
+      navigator.clipboard.writeText(successSurID).catch(() => {});
+    }
+  }, [showSuccess, successSurID]);
+
   // log state ทุกครั้งที่ render
-  console.log(">>> Current Wizard state (render):", data);
+  // console.log(">>> Current Wizard state (render):", data);
 
   return (
-    <div>
+    <>
+      {/* Blur Layer */}
+      <div
+        id="survey-blur-bg"
+        className={`fixed inset-0 z-[49] bg-black/40 backdrop-blur-sm transition-all duration-200 ${showSuccess ? "" : "hidden"}`}
+        aria-hidden="true"
+      />
       {step === 1 && <Step1StoreInfo data={data.store_info} onNext={handleStoreInfoNext} />}
       {step === 2 && <Step2Products data={data.products} onBack={() => setStep(1)} onNext={handleProductsNext} />}
       {step === 3 && (
@@ -203,6 +239,29 @@ async function convertFileToJpeg(file) {
           userId={data.store_info?.user_id || ""}
         />
       )}
-    </div>
+
+      {/* === Success Popup Dialog === */}
+      <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
+        <DialogContent className="max-w-sm rounded-2xl shadow-xl p-8 flex flex-col items-center gap-3 z-[50]">
+          <DialogTitle className="text-2xl text-center mb-1">🎉 ลงทะเบียนสำเร็จ</DialogTitle>
+          <DialogDescription className="text-center text-lg mb-2">
+            รหัสแบบสอบถามของคุณ<br />
+            <span className="font-bold text-xl bg-gray-100 px-3 py-1 rounded block mt-2">{successSurID}</span>
+            <span className="text-xs text-green-600 mt-2 block">(คัดลอกอัตโนมัติแล้ว)</span>
+          </DialogDescription>
+          <DialogFooter className="flex flex-col gap-2 items-center w-full">
+            <Button
+              className="w-full"
+              onClick={() => {
+                router.push(`/survey?user_id=${userIdSuccess || "demo"}`);
+                setShowSuccess(false);
+              }}
+            >
+              ปิด
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
