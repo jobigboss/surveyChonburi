@@ -9,8 +9,9 @@ import {
   SelectItem,
   SelectGroup,
 } from "@/components/ui/select";
+import { useSearchParams } from "next/navigation";
 
-// ---------- CONST DATA ----------
+// ----- CONST -----
 const foremostBlue = "#0094E5";
 const SHOP_SIZE_OPTIONS = [
   { value: "A", label: "A", desc: "ร้าน 1 คูหา หรือร้านของชำ", images: ["/images/shopA-1.png", "/images/shopA-2.png", "/images/shopA-3.png"] },
@@ -27,7 +28,7 @@ const SPECIAL_TYPE = [
   { value: "ถูกดี", label: "ร้านถูกดี" },
 ];
 
-// ---------- ProvinceDropdown ----------
+// ----- PROVINCE DROPDOWN -----
 function ProvinceDropdown({ storeInfo, setStoreInfo }) {
   const [provinces, setProvinces] = useState([]);
   const [districts, setDistricts] = useState([]);
@@ -36,6 +37,7 @@ function ProvinceDropdown({ storeInfo, setStoreInfo }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // Mock fallback data
   const MOCK_PROVINCE = useMemo(() => [
     {
       province: "กรุงเทพมหานคร",
@@ -55,21 +57,21 @@ function ProvinceDropdown({ storeInfo, setStoreInfo }) {
   useEffect(() => {
     setLoading(true);
     fetch("/api/servey/get/provice")
-      .then(async res => {
+      .then(async (res) => {
         if (!res.ok) throw new Error("API not found: " + res.status);
         const text = await res.text();
         let data;
         try { data = JSON.parse(text); }
         catch { throw new Error("API response is not JSON"); }
         if (Array.isArray(data) && data[0]?.sub_district) {
-          const provinces = {};
+          const provincesObj = {};
           data.forEach(({ province, district, sub_district, postcode }) => {
             if (!province || !district || !sub_district) return;
-            if (!provinces[province]) provinces[province] = {};
-            if (!provinces[province][district]) provinces[province][district] = [];
-            provinces[province][district].push({ subdistrict: sub_district, postcode });
+            if (!provincesObj[province]) provincesObj[province] = {};
+            if (!provincesObj[province][district]) provincesObj[province][district] = [];
+            provincesObj[province][district].push({ subdistrict: sub_district, postcode });
           });
-          return Object.entries(provinces).map(([province, districtsObj]) => ({
+          return Object.entries(provincesObj).map(([province, districtsObj]) => ({
             province,
             districts: Object.entries(districtsObj).map(([district, subdistricts]) => ({
               district,
@@ -91,14 +93,10 @@ function ProvinceDropdown({ storeInfo, setStoreInfo }) {
   useEffect(() => {
     const foundProvince = provinces.find(p => p.province === storeInfo.store_province);
     setDistricts(foundProvince?.districts || []);
-    if (!storeInfo.store_district) {
-      setSubdistricts([]); setPostcode(""); return;
-    }
+    if (!storeInfo.store_district) { setSubdistricts([]); setPostcode(""); return; }
     const foundDistrict = foundProvince?.districts?.find(d => d.district === storeInfo.store_district);
     setSubdistricts(foundDistrict?.subdistricts || []);
-    if (!storeInfo.store_subdistrict) {
-      setPostcode(""); return;
-    }
+    if (!storeInfo.store_subdistrict) { setPostcode(""); return; }
     const foundSub = foundDistrict?.subdistricts?.find(s => s.subdistrict === storeInfo.store_subdistrict);
     setPostcode(foundSub?.postcode || "");
   }, [provinces, storeInfo]);
@@ -118,6 +116,7 @@ function ProvinceDropdown({ storeInfo, setStoreInfo }) {
   }, [setStoreInfo, subdistricts]);
 
   if (loading) return <div className="py-8 text-center text-lg text-[#888]">กำลังโหลดจังหวัด...</div>;
+
   return (
     <div className="grid gap-3">
       {error && <div className="text-sm text-red-500 bg-red-100 rounded px-2 py-1 mb-2">{error}</div>}
@@ -146,14 +145,18 @@ function ProvinceDropdown({ storeInfo, setStoreInfo }) {
       />
       <div>
         <label className="block text-base font-semibold mb-1 text-[#1a355e]">รหัสไปรษณีย์</label>
-        <input className="w-full rounded-xl border border-[#dde8f5] px-3 py-2 text-[16px] bg-[#f7fbff] font-medium"
-          value={postcode} readOnly required />
+        <input
+          className="w-full rounded-xl border border-[#dde8f5] px-3 py-2 text-[16px] bg-[#f7fbff] font-medium"
+          value={postcode}
+          readOnly
+          required
+        />
       </div>
     </div>
   );
 }
 
-// ---------- Select Wrapper ----------
+// ----- FORM SELECT -----
 function FormSelectShadcn({ label, value, onChange, options = [], required, disabled, placeholder = "เลือก..." }) {
   const filteredOptions = options.filter(opt => opt.value && opt.value !== "");
   return (
@@ -198,7 +201,7 @@ function FormSelectShadcn({ label, value, onChange, options = [], required, disa
   );
 }
 
-// ---------- INPUT / UPLOAD ----------
+// ----- FORM INPUT -----
 function FormInput({ label, value, onChange, type = "text", required, readOnly }) {
   return (
     <div>
@@ -215,6 +218,7 @@ function FormInput({ label, value, onChange, type = "text", required, readOnly }
   );
 }
 
+// ----- FORM UPLOAD -----
 function FormUpload({ label, value, onChange, onRemove, inputRef, error }) {
   return (
     <div className="flex flex-col items-center w-full">
@@ -222,7 +226,10 @@ function FormUpload({ label, value, onChange, onRemove, inputRef, error }) {
       {!value && (
         <label className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#dde8f5] bg-[#f7fbff] cursor-pointer hover:bg-[#f0f7fd] transition relative">
           <Camera color="#FF9100" size={64} />
-          <input type="file" accept="image/*" capture="environment"
+          <input
+            type="file"
+            accept="image/jpeg"
+            capture="environment"
             onChange={onChange}
             className="absolute inset-0 opacity-0 cursor-pointer"
             tabIndex={-1}
@@ -234,10 +241,17 @@ function FormUpload({ label, value, onChange, onRemove, inputRef, error }) {
       {error && <div className="text-xs text-red-500 mt-2">{error}</div>}
       {value && (
         <div className="relative w-80 max-w-[95vw] h-80 max-h-[60vw] sm:max-h-[350px] mb-2">
-          <img src={value} alt={label} className="w-full h-full object-cover rounded-2xl shadow-md border" />
-          <button type="button" onClick={onRemove}
+          <img
+            src={typeof value === "string" ? value : URL.createObjectURL(value)}
+            alt={label}
+            className="w-full h-full object-cover rounded-2xl shadow-md border"
+          />
+          <button
+            type="button"
+            onClick={onRemove}
             aria-label="ลบรูป"
-            className="absolute top-2 right-2 bg-white rounded-full p-2 border border-red-300 shadow hover:bg-red-100 transition z-10">
+            className="absolute top-2 right-2 bg-white rounded-full p-2 border border-red-300 shadow hover:bg-red-100 transition z-10"
+          >
             <X color="#f43f5e" size={28} />
           </button>
         </div>
@@ -246,6 +260,7 @@ function FormUpload({ label, value, onChange, onRemove, inputRef, error }) {
   );
 }
 
+// ----- SHOP SIZE -----
 function ShopSizeSelect({ value, onChange }) {
   const selected = SHOP_SIZE_OPTIONS.find(opt => opt.value === value);
   return (
@@ -253,12 +268,16 @@ function ShopSizeSelect({ value, onChange }) {
       <div className="text-base font-bold mb-2 text-[#0094E5]">ลักษณะร้านค้าที่ท่านพบเจอ</div>
       <div className="flex gap-2 flex-wrap mb-2">
         {SHOP_SIZE_OPTIONS.map(opt => (
-          <button type="button" key={opt.value}
+          <button
+            type="button"
+            key={opt.value}
             onClick={() => onChange(opt.value)}
             className={`border rounded-lg px-4 py-2 font-semibold text-lg transition
               ${value === opt.value ? "border-[#0094E5] bg-[#e5f4fa] text-[#0094E5] shadow" : "border-[#cfe5f8] bg-white text-[#1a355e] hover:bg-[#f7fbff]"}`}
             style={{ minWidth: 48 }}
-          >{opt.label}</button>
+          >
+            {opt.label}
+          </button>
         ))}
       </div>
       {selected && (
@@ -269,8 +288,12 @@ function ShopSizeSelect({ value, onChange }) {
           {!!selected.images?.length && (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
               {selected.images.map((img, idx) => (
-                <img key={idx} src={img} alt={`ตัวอย่างร้าน${selected.label}-${idx + 1}`}
-                  className="rounded-lg border shadow-sm object-cover w-full aspect-[4/3]" />
+                <img
+                  key={idx}
+                  src={img}
+                  alt={`ตัวอย่างร้าน${selected.label}-${idx + 1}`}
+                  className="rounded-lg border shadow-sm object-cover w-full aspect-[4/3]"
+                />
               ))}
             </div>
           )}
@@ -280,12 +303,15 @@ function ShopSizeSelect({ value, onChange }) {
   );
 }
 
-// ---------- MAIN (Wizard ready) ----------
+// ----- MAIN COMPONENT -----
 export default function Step1StoreInfo({ data = {}, onNext }) {
-  // ควรรับ user_id จาก props หรือจาก data
+  const searchParams = useSearchParams();
+  const userIdFromQuery = searchParams.get("user_id");
+
   const [storeInfo, setStoreInfo] = useState({
     ...data,
-    permission: "อนุญาต", // Default เลย
+    user_id: userIdFromQuery || data.user_id || "",
+    permission: "อนุญาต",
   });
 
   const [geoLoading, setGeoLoading] = useState(false);
@@ -297,32 +323,29 @@ export default function Step1StoreInfo({ data = {}, onNext }) {
     photo_shelf: useRef(),
   };
 
-  // อัปเดตค่าเมื่อ data หรือ user_id เปลี่ยน (กรณี back/forward)
   useEffect(() => {
     setStoreInfo(prev => ({
       ...prev,
       ...data,
+      user_id: userIdFromQuery || data.user_id || "",
       permission: "อนุญาต",
     }));
-    // eslint-disable-next-line
-  }, [JSON.stringify(data)]);
+  }, [JSON.stringify(data), userIdFromQuery]);
 
   const handleImage = useCallback((e, field) => {
     const file = e.target.files[0];
     setPhotoError("");
     if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      setPhotoError("ไฟล์ต้องเป็นรูปภาพเท่านั้น"); return;
+    if (!["image/jpeg", "image/jpg"].includes(file.type)) {
+      setPhotoError("ไฟล์ต้องเป็น JPEG เท่านั้น");
+      return;
     }
     if (file.size > 3 * 1024 * 1024) {
-      setPhotoError("ขนาดไฟล์รูปต้องไม่เกิน 3MB"); return;
+      setPhotoError("ขนาดไฟล์รูปต้องไม่เกิน 3MB");
+      return;
     }
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      setStoreInfo(prev => ({ ...prev, [field]: ev.target.result }));
-      if (field === "photo_store") setTimeout(() => handleDetectLocation(), 200);
-    };
-    reader.readAsDataURL(file);
+    setStoreInfo(prev => ({ ...prev, [field]: file }));
+    if (field === "photo_store") setTimeout(() => handleDetectLocation(), 200);
   }, []);
 
   const handleRemoveImage = useCallback((field) => {
@@ -358,7 +381,6 @@ export default function Step1StoreInfo({ data = {}, onNext }) {
 
   useEffect(() => {
     if (!storeInfo.lat || !storeInfo.lng) handleDetectLocation();
-    // eslint-disable-next-line
   }, []);
 
   const handleSpecialType = (e) => {
@@ -368,7 +390,20 @@ export default function Step1StoreInfo({ data = {}, onNext }) {
     setStoreInfo(prev => ({ ...prev, special_type: selected }));
   };
 
-  const isNextDisabled = geoLoading || !storeInfo.store_name || !storeInfo.photo_store;
+  const isNextDisabled =
+    geoLoading ||
+    !storeInfo.store_name ||
+    !storeInfo.store_province ||
+    !storeInfo.store_district ||
+    !storeInfo.store_subdistrict ||
+    !storeInfo.photo_store ||
+    !storeInfo.lat ||
+    !storeInfo.lng ||
+    !storeInfo.shop_size ||
+    !storeInfo.store_freezer ||
+    (storeInfo.store_freezer === "มี" && !storeInfo.photo_freezer) ||
+    !storeInfo.store_shelf ||
+    (storeInfo.store_shelf === "มี" && !storeInfo.photo_shelf);
 
   const handleSelectFreezer = (opt) => {
     setStoreInfo(prev => ({
@@ -385,10 +420,22 @@ export default function Step1StoreInfo({ data = {}, onNext }) {
     }));
   };
 
-  // ---- เปลี่ยนจาก router.push เป็น call onNext ----
   const handleNext = () => {
     if (!isNextDisabled && typeof onNext === "function") {
-      onNext(storeInfo);
+      const cleanStoreInfo = {
+        ...storeInfo,
+        location: {
+          lat: storeInfo.lat,
+          lng: storeInfo.lng,
+          address: storeInfo.location_address || "",
+        },
+        special_type: Array.isArray(storeInfo.special_type) ? storeInfo.special_type : [],
+      };
+      delete cleanStoreInfo.lat;
+      delete cleanStoreInfo.lng;
+      delete cleanStoreInfo.location_address;
+
+      onNext(cleanStoreInfo);
     }
   };
 
@@ -399,16 +446,30 @@ export default function Step1StoreInfo({ data = {}, onNext }) {
         className="w-full max-w-md bg-white shadow-xl rounded-3xl px-5 py-8 flex flex-col gap-5"
       >
         <div className="text-center mb-3">
-          <img src="https://www.foremostthailand.com/wp-content/uploads/2022/03/footer-icon_foremost-e1648914092691.png"
-            className="w-16 h-16 mx-auto mb-2 rounded-full border-4 border-[#f0f6ff] shadow" alt="Foremost" />
+          <img
+            src="https://www.foremostthailand.com/wp-content/uploads/2022/03/footer-icon_foremost-e1648914092691.png"
+            className="w-16 h-16 mx-auto mb-2 rounded-full border-4 border-[#f0f6ff] shadow"
+            alt="Foremost"
+          />
           <h2 className="font-extrabold text-2xl text-[#0094E5]">ข้อมูลร้านค้า</h2>
         </div>
 
-        {storeInfo.user_id && <div className="text-base font-semibold text-[#0094E5] mb-1">รหัสผู้ใช้: {storeInfo.user_id}</div>}
-
-        <FormInput label="ชื่อร้าน *" value={storeInfo.store_name || ""} onChange={v => setStoreInfo({ ...storeInfo, store_name: v })} required />
-        <FormInput label="บ้านเลขที่" value={storeInfo.store_number_address || ""} onChange={v => setStoreInfo({ ...storeInfo, store_number_address: v })} />
-        <FormInput label="หมู่ที่" value={storeInfo.store_number_moo || ""} onChange={v => setStoreInfo({ ...storeInfo, store_number_moo: v })} />
+        <FormInput
+          label="ชื่อร้าน *"
+          value={storeInfo.store_name || ""}
+          onChange={v => setStoreInfo({ ...storeInfo, store_name: v })}
+          required
+        />
+        <FormInput
+          label="บ้านเลขที่"
+          value={storeInfo.store_number_address || ""}
+          onChange={v => setStoreInfo({ ...storeInfo, store_number_address: v })}
+        />
+        <FormInput
+          label="หมู่ที่"
+          value={storeInfo.store_number_moo || ""}
+          onChange={v => setStoreInfo({ ...storeInfo, store_number_moo: v })}
+        />
 
         <ProvinceDropdown storeInfo={storeInfo} setStoreInfo={setStoreInfo} />
 
@@ -423,14 +484,25 @@ export default function Step1StoreInfo({ data = {}, onNext }) {
 
         {storeInfo.photo_store && (
           <>
-            <FormInput label="ที่ตั้งร้าน/รายละเอียดสถานที่"
+            <FormInput
+              label="ที่ตั้งร้าน/รายละเอียดสถานที่"
               value={storeInfo.location_address}
               onChange={v => setStoreInfo({ ...storeInfo, location_address: v })}
               readOnly
             />
             <div className="flex gap-2">
-              <FormInput label="Latitude" type="number" value={storeInfo.lat} readOnly onChange={v => setStoreInfo({ ...storeInfo, lat: v })} />
-              <FormInput label="Longitude" type="number" value={storeInfo.lng} readOnly onChange={v => setStoreInfo({ ...storeInfo, lng: v })} />
+              <FormInput
+                label="Latitude"
+                type="number"
+                value={storeInfo.lat}
+                readOnly
+              />
+              <FormInput
+                label="Longitude"
+                type="number"
+                value={storeInfo.lng}
+                readOnly
+              />
             </div>
             {geoLoading && <div className="text-blue-500 text-sm animate-pulse">กำลังดึงตำแหน่ง...</div>}
             {geoError && <div className="text-xs text-red-500 mt-2">{geoError}</div>}
@@ -445,12 +517,20 @@ export default function Step1StoreInfo({ data = {}, onNext }) {
             {SPECIAL_TYPE.map(opt => {
               const checked = storeInfo.special_type?.includes(opt.value) || false;
               return (
-                <label key={opt.value}
+                <label
+                  key={opt.value}
                   className={`
                     flex items-center px-4 py-1.5 rounded-xl border cursor-pointer select-none text-sm font-medium transition
                     ${checked ? "bg-[#FF9100]/10 border-[#FF9100] text-[#FF9100] shadow-sm" : "bg-white border-gray-200 text-[#444] hover:border-[#FF9100]"}
-                  `}>
-                  <input type="checkbox" value={opt.value} checked={checked} onChange={handleSpecialType} className="hidden" />
+                  `}
+                >
+                  <input
+                    type="checkbox"
+                    value={opt.value}
+                    checked={checked}
+                    onChange={handleSpecialType}
+                    className="hidden"
+                  />
                   {opt.label}
                 </label>
               );
@@ -465,17 +545,28 @@ export default function Step1StoreInfo({ data = {}, onNext }) {
           </div>
           <div className="flex flex-row gap-2">
             {["มี", "ไม่มี"].map(opt => (
-              <label key={opt} tabIndex={0}
+              <label
+                key={opt}
+                tabIndex={0}
                 className={`
                   flex items-center px-3 py-1.5 rounded-lg border font-medium text-sm cursor-pointer select-none transition-all
                   outline-none focus:ring-2 focus:ring-[#FF9100]/40
                   ${storeInfo.store_freezer === opt
                     ? "bg-[#FF9100]/20 border-[#FF9100] text-[#FF9100] shadow"
-                    : "bg-white border-gray-200 text-[#1a355e] hover:border-[#FF9100]/50 hover:bg-[#fff4e6]"}
+                    : "bg-white border-gray-200 text-[#1a355e] hover:border-[#FF9100]/50 hover:bg-[#fff4e6]"
+                  }
                 `}
                 style={{ minWidth: 56, boxShadow: storeInfo.store_freezer === opt ? "0 2px 6px #ffe6c180" : "none" }}
-                onKeyDown={e => { if (e.key === " " || e.key === "Enter") handleSelectFreezer(opt); }}>
-                <input type="radio" name="store_freezer" value={opt} checked={storeInfo.store_freezer === opt} onChange={() => handleSelectFreezer(opt)} className="hidden" />
+                onKeyDown={e => { if (e.key === " " || e.key === "Enter") handleSelectFreezer(opt); }}
+              >
+                <input
+                  type="radio"
+                  name="store_freezer"
+                  value={opt}
+                  checked={storeInfo.store_freezer === opt}
+                  onChange={() => handleSelectFreezer(opt)}
+                  className="hidden"
+                />
                 {opt}
               </label>
             ))}
@@ -499,18 +590,29 @@ export default function Step1StoreInfo({ data = {}, onNext }) {
           </div>
           <div className="flex flex-row gap-2">
             {["มี", "มี แต่วางสินค้ากลุ่มอื่น", "ไม่มี"].map(opt => (
-              <label key={opt} tabIndex={0}
+              <label
+                key={opt}
+                tabIndex={0}
                 aria-label={opt}
                 className={`
                   flex items-center justify-center px-4 py-2 rounded-xl border font-medium text-sm cursor-pointer select-none transition-all
                   outline-none focus:ring-2 focus:ring-[#FF9100]/30
                   ${storeInfo.store_shelf === opt
                     ? "bg-[#FF9100]/15 border-[#FF9100] text-[#FF9100]"
-                    : "bg-white border-gray-200 text-[#21295c] hover:border-[#FF9100]/60 hover:bg-[#fff4e6]"}
+                    : "bg-white border-gray-200 text-[#21295c] hover:border-[#FF9100]/60 hover:bg-[#fff4e6]"
+                  }
                 `}
                 style={{ minWidth: 64, fontWeight: storeInfo.store_shelf === opt ? 700 : 500 }}
-                onKeyDown={e => { if (e.key === " " || e.key === "Enter") handleSelectShelf(opt); }}>
-                <input type="radio" name="store_shelf" value={opt} checked={storeInfo.store_shelf === opt} onChange={() => handleSelectShelf(opt)} className="hidden" />
+                onKeyDown={e => { if (e.key === " " || e.key === "Enter") handleSelectShelf(opt); }}
+              >
+                <input
+                  type="radio"
+                  name="store_shelf"
+                  value={opt}
+                  checked={storeInfo.store_shelf === opt}
+                  onChange={() => handleSelectShelf(opt)}
+                  className="hidden"
+                />
                 {opt}
               </label>
             ))}
@@ -531,7 +633,8 @@ export default function Step1StoreInfo({ data = {}, onNext }) {
           type="submit"
           disabled={isNextDisabled}
           className={`w-full py-3 rounded-xl font-bold text-lg shadow-lg mt-2 ${isNextDisabled ? "bg-gray-200 text-gray-400 cursor-not-allowed" : ""}`}
-          style={isNextDisabled ? {} : { background: foremostBlue, color: "#fff", letterSpacing: "1px" }}>
+          style={isNextDisabled ? {} : { background: foremostBlue, color: "#fff", letterSpacing: "1px" }}
+        >
           ถัดไป
         </button>
       </form>

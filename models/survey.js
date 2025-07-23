@@ -1,7 +1,8 @@
+// models/Survey.js
 import mongoose from "mongoose";
 
 const SurveySchema = new mongoose.Schema({
-  // ✅ ข้อมูลร้าน (Step 1)
+  surID: { type: String, unique: true, required: true },
   store_info: {
     store_name: { type: String, required: true },
     store_number_address: { type: String },
@@ -9,38 +10,34 @@ const SurveySchema = new mongoose.Schema({
     store_province: { type: String },
     store_district: { type: String },
     store_subdistrict: { type: String },
-    store_freezer: { type: String },
-    store_shelf: { type: String },
-    photo_store: { type: String },
+    store_postcode: { type: String },
+    store_freezer: { type: String }, // มี/ไม่มี
+    store_shelf: { type: String },   // มี/ไม่มี
+    photo_store: { type: String },   // URL หรือ base64
     photo_freezer: { type: String },
-    photo_shelf: { type: String }, // path หรือ URL
-    shop_size: { type: String }, // A-F
-    special_type: [{ type: String }], // ร้านธงฟ้า, ร้านติดดาว
+    photo_shelf: { type: String },
+    shop_size: { type: String },     // A-F
+    special_type: [{ type: String }],// เช่น ธงฟ้า, ติดดาว
     location: {
       lat: { type: Number },
-      lng: { type: Number }
+      lng: { type: Number },
+      address: { type: String }
     },
-   location_address:{type:String} ,
-    permission:{type:String}
+    permission: { type: String, default: "อนุญาต" }
   },
-
-  // ✅ ข้อมูลสินค้า (Step 2)
   products: [
     {
-      product_id: { type: String }, // หรือชื่อสินค้า
-      status: { type: String, enum: ["available", "out_of_stock", "discontinued", "never_sold", ""] },
+      product_id: { type: String },
+      status: { type: String },
       priceBox: { type: Number },
       pricePack: { type: Number },
       priceCarton: { type: Number },
-      statusFMFR:{type: String},
-      statusOMG:{type: String},
+      
     }
   ],
-
-  // ✅ ข้อมูลเชิงการตลาด (Step 3)
   market_info: {
-    reason: { type: String }, // ที่มาของสินค้า
-    demand: { type: String, enum: ["buy", "not_buy", ""] }, // ความต้องการซื้อ
+    reason: { type: String },
+    demand: { type: String, enum: ["buy", "not_buy", ""] },
     contact: { type: String },
     phone: { type: String },
     interest_products: [
@@ -50,10 +47,9 @@ const SurveySchema = new mongoose.Schema({
       }
     ]
   },
-
-  // ✅ Meta Info
-  user_id: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // คนคีย์ข้อมูล
-  status: { type: String, enum: ["completed", "pending"], default: "pending" }
+  statusFMFR: { type: String },
+  statusOMG: { type: String },
+  user_id: { type: String  },
 }, { timestamps: true });
 
 export default mongoose.models.Survey || mongoose.model("Survey", SurveySchema, "surveyReport");
