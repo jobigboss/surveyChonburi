@@ -1,6 +1,7 @@
 "use client"
 import React from 'react';
 import SurveyWizard from './components/SurveyWizard';
+import { useSearchParams } from "next/navigation";
 
 function PermissionPage() {
   return (
