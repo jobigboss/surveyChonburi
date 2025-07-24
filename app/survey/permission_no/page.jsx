@@ -1,11 +1,10 @@
-import React from 'react'
+import { Suspense } from "react";
+import PermissionNoPage from "./Permission_noPage";
 
-function PermissionNoPage() {
+export default function Page() {
   return (
-    <div>
-      Hello PermissionNoPage
-    </div>
-  )
+    <Suspense fallback={<div>Loading...</div>}>
+      <PermissionNoPage />
+    </Suspense>
+  );
 }
-
-export default PermissionNoPage;

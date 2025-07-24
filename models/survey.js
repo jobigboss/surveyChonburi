@@ -23,7 +23,8 @@ const SurveySchema = new mongoose.Schema({
       lng: { type: Number },
       address: { type: String }
     },
-    permission: { type: String, default: "อนุญาต" }
+    permission: { type: String, default: "อนุญาต" },
+    permission_reason: { type: String }
   },
   products: [
     {
