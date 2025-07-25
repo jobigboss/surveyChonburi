@@ -339,8 +339,8 @@ export default function Step1StoreInfo({ data = {}, onNext }) {
       setPhotoError("ไฟล์ต้องเป็น JPEG เท่านั้น");
       return;
     }
-    if (file.size > 3 * 1024 * 1024) {
-      setPhotoError("ขนาดไฟล์รูปต้องไม่เกิน 3MB");
+    if (file.size > 5 * 1024 * 1024) {
+      setPhotoError("ขนาดไฟล์รูปต้องไม่เกิน 5MB");
       return;
     }
     setStoreInfo(prev => ({ ...prev, [field]: file }));
