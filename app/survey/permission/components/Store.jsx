@@ -331,21 +331,35 @@ export default function Step1StoreInfo({ data = {}, onNext }) {
     }));
   }, [JSON.stringify(data), userIdFromQuery]);
 
+  // const handleImage = useCallback((e, field) => {
+  //   const file = e.target.files[0];
+  //   setPhotoError("");
+  //   if (!file) return;
+  //   if (!["image/jpeg", "image/jpg"].includes(file.type)) {
+  //     setPhotoError("ไฟล์ต้องเป็น JPEG เท่านั้น");
+  //     return;
+  //   }
+  //   if (file.size > 5 * 1024 * 1024) {
+  //     setPhotoError("ขนาดไฟล์รูปต้องไม่เกิน 5MB");
+  //     return;
+  //   }
+  //   setStoreInfo(prev => ({ ...prev, [field]: file }));
+  //   if (field === "photo_store") setTimeout(() => handleDetectLocation(), 200);
+  // }, []);
+
   const handleImage = useCallback((e, field) => {
-    const file = e.target.files[0];
-    setPhotoError("");
-    if (!file) return;
-    if (!["image/jpeg", "image/jpg"].includes(file.type)) {
-      setPhotoError("ไฟล์ต้องเป็น JPEG เท่านั้น");
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setPhotoError("ขนาดไฟล์รูปต้องไม่เกิน 5MB");
-      return;
-    }
-    setStoreInfo(prev => ({ ...prev, [field]: file }));
-    if (field === "photo_store") setTimeout(() => handleDetectLocation(), 200);
-  }, []);
+  const file = e.target.files[0];
+  setPhotoError("");
+  if (!file) return;
+
+  // ไม่ตรวจประเภทและขนาดไฟล์อีกต่อไป
+  setStoreInfo(prev => ({ ...prev, [field]: file }));
+
+  if (field === "photo_store") {
+    setTimeout(() => handleDetectLocation(), 200);
+  }
+}, []);
+
 
   const handleRemoveImage = useCallback((field) => {
     setStoreInfo(prev => ({ ...prev, [field]: null }));
