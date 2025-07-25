@@ -35,6 +35,12 @@ const REASONS = [
   { value: "closing", label: "ร้านเตรียมจะยกเลิกกิจการ" },
   { value: "owner_absent", label: "ไม่สามารถให้ข้อมูลได้ (เจ้าของร้านไม่อยู่)" },
 ];
+const PRODUCT_STATUS_OPTIONS = [
+  { value: "มีขาย", label: "มีขาย" },
+  { value: "สินค้าหมด", label: "สินค้าหมด" },
+  { value: "ไม่เคยขาย", label: "ไม่เคยขาย" },
+  { value: "เลิกขาย", label: "เลิกขาย" },
+];
 
 export default function StepStoreNoPermission({ data = {}, onSave }) {
   const searchParams = useSearchParams();
@@ -47,6 +53,8 @@ export default function StepStoreNoPermission({ data = {}, onSave }) {
     permission_reason: "",
     shop_size: "",
     special_type: [],
+    statusFMFR: "",
+    statusOMG: "",
   });
 
   const [geoLoading, setGeoLoading] = useState(false);
@@ -73,6 +81,8 @@ export default function StepStoreNoPermission({ data = {}, onSave }) {
       ...prev,
       ...data,
       user_id: userIdFromQuery || data.user_id || "",
+      statusFMFR: prev.statusFMFR || data.statusFMFR || "",
+      statusOMG: prev.statusOMG || data.statusOMG || "",
       permission: "ไม่อนุญาต",
     }));
   }, [JSON.stringify(data), userIdFromQuery]);
@@ -274,6 +284,23 @@ export default function StepStoreNoPermission({ data = {}, onSave }) {
               );
             })}
           </div>
+        </div>
+
+        {/* สถานะสินค้า */}
+        <div>
+          <div className="font-semibold mb-2 text-[#0094E5]">สถานะสินค้า</div>
+          <FormSelectShadcn
+            label="Status FMFR"
+            value={storeInfo.statusFMFR || ""}
+            onChange={(v) => setStoreInfo({ ...storeInfo, statusFMFR: v })}
+            options={PRODUCT_STATUS_OPTIONS}
+          />
+          <FormSelectShadcn
+            label="Status OMG"
+            value={storeInfo.statusOMG || ""}
+            onChange={(v) => setStoreInfo({ ...storeInfo, statusOMG: v })}
+            options={PRODUCT_STATUS_OPTIONS}
+          />
         </div>
 
         {/* เหตุผล */}

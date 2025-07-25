@@ -125,6 +125,7 @@ export default function RegisterPage({ onClose }) {
       >
         <option value="member">Member</option>
         <option value="admin">Admin</option>
+        <option value="customer">Customer</option>
       </select>
 
       {formData.role === "member" && (
