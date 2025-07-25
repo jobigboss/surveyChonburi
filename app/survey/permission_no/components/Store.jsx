@@ -2,16 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Camera, X } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-  SelectGroup,
-} from "@/components/ui/select";
-
-const foremostBlue = "#0094E5";
+import { Card, CardContent } from "@/components/ui/card";
 
 const SHOP_SIZE_OPTIONS = [
   { value: "A", label: "A", desc: "ร้าน 1 คูหา หรือร้านของชำ", images: ["/images/shopA-1.png", "/images/shopA-2.png", "/images/shopA-3.png"] },
@@ -35,12 +26,6 @@ const REASONS = [
   { value: "closing", label: "ร้านเตรียมจะยกเลิกกิจการ" },
   { value: "owner_absent", label: "ไม่สามารถให้ข้อมูลได้ (เจ้าของร้านไม่อยู่)" },
 ];
-const PRODUCT_STATUS_OPTIONS = [
-  { value: "มีขาย", label: "มีขาย" },
-  { value: "สินค้าหมด", label: "สินค้าหมด" },
-  { value: "ไม่เคยขาย", label: "ไม่เคยขาย" },
-  { value: "เลิกขาย", label: "เลิกขาย" },
-];
 
 export default function StepStoreNoPermission({ data = {}, onSave }) {
   const searchParams = useSearchParams();
@@ -53,8 +38,6 @@ export default function StepStoreNoPermission({ data = {}, onSave }) {
     permission_reason: "",
     shop_size: "",
     special_type: [],
-    statusFMFR: "",
-    statusOMG: "",
   });
 
   const [geoLoading, setGeoLoading] = useState(false);
@@ -63,13 +46,89 @@ export default function StepStoreNoPermission({ data = {}, onSave }) {
   const [userRoute, setUserRoute] = useState("");
   const fileInputRef = useRef();
 
-  // ✅ โหลดข้อมูล user เอา route มา filter จังหวัด
+  // --- สินค้า ---
+  const [products, setProducts] = useState([]);
+  const [productData, setProductData] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState("");
+
+  // ดึงข้อมูลสินค้า
+  useEffect(() => {
+    setLoading(true);
+    setFetchError("");
+    fetch("/api/servey/get/product")
+      .then((res) => {
+        if (!res.ok) throw new Error("โหลดข้อมูลสินค้าไม่สำเร็จ");
+        return res.json();
+      })
+      .then((data) => {
+        const allowIds = ["PRO-25004", "PRO-25007", "PRO-25008"];
+        const filtered = (Array.isArray(data) ? data : []).filter(
+          (p) => allowIds.includes(p.fmProID)
+        );
+        setProducts(filtered);
+        const initialStatus = {};
+        filtered.forEach((p) => {
+          initialStatus[p.fmProID] = {
+            status: "ไม่พบ",
+            priceBox: "",
+            pricePack: "",
+            priceCarton: "",
+          };
+        });
+        setProductData(initialStatus);
+      })
+      .catch(() => {
+        setFetchError("เกิดข้อผิดพลาดในการโหลดสินค้า");
+        setProducts([]);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  // Toggle สถานะ "มีขาย"/"ไม่พบ"
+  const toggleStatus = (productId) => {
+    setProductData((prev) => {
+      const currentStatus = prev[productId]?.status;
+      if (currentStatus === "มีขาย") {
+        return {
+          ...prev,
+          [productId]: {
+            ...prev[productId],
+            status: "ไม่พบ",
+            priceBox: "",
+            pricePack: "",
+            priceCarton: "",
+          },
+        };
+      }
+      return {
+        ...prev,
+        [productId]: {
+          ...prev[productId],
+          status: "มีขาย",
+        },
+      };
+    });
+  };
+
+  // ใส่ราคาสินค้า (เฉพาะ FMFR ที่มีขาย)
+  const handlePriceChange = (productId, key, value) => {
+    setProductData((prev) => ({
+      ...prev,
+      [productId]: {
+        ...prev[productId],
+        [key]: value !== "" ? Number(value) : "",
+      },
+    }));
+  };
+
+  // โหลด user เอา route มา filter จังหวัด
   useEffect(() => {
     if (!userIdFromQuery) return;
     fetch(`/api/servey/get/user?user_id=${userIdFromQuery}`)
       .then((res) => res.json())
       .then((user) => {
-         const found = Array.isArray(user)
+        const found = Array.isArray(user)
           ? user.find((u) => u.user_id === userIdFromQuery)
           : user;
         if (found?.route) setUserRoute(String(found.route).replace(",", ""));
@@ -81,13 +140,11 @@ export default function StepStoreNoPermission({ data = {}, onSave }) {
       ...prev,
       ...data,
       user_id: userIdFromQuery || data.user_id || "",
-      statusFMFR: prev.statusFMFR || data.statusFMFR || "",
-      statusOMG: prev.statusOMG || data.statusOMG || "",
       permission: "ไม่อนุญาต",
     }));
   }, [JSON.stringify(data), userIdFromQuery]);
 
-  // ✅ อัพโหลดรูป
+  // อัพโหลดรูป
   const handleImage = useCallback((e) => {
     const file = e.target.files[0];
     setPhotoError("");
@@ -109,7 +166,7 @@ export default function StepStoreNoPermission({ data = {}, onSave }) {
     setTimeout(() => fileInputRef.current?.click(), 150);
   }, []);
 
-  // ✅ ดึง GPS
+  // ดึง GPS
   const handleDetectLocation = useCallback(() => {
     setGeoError("");
     setGeoLoading(true);
@@ -148,7 +205,7 @@ export default function StepStoreNoPermission({ data = {}, onSave }) {
     if (!storeInfo.lat || !storeInfo.lng) handleDetectLocation();
   }, []);
 
-  // ✅ ประเภทร้านพิเศษ
+  // ประเภทร้านพิเศษ
   const handleSpecialType = (e) => {
     const { value, checked } = e.target;
     let selected = storeInfo.special_type || [];
@@ -165,6 +222,7 @@ export default function StepStoreNoPermission({ data = {}, onSave }) {
     !storeInfo.photo_store ||
     !storeInfo.permission_reason;
 
+  // ------- สำคัญ!!  map products แบบไม่แนบ _id, แนบ product_id/fmProID -------
   const handleSave = () => {
     if (!isSaveDisabled && typeof onSave === "function") {
       const cleanData = {
@@ -174,6 +232,13 @@ export default function StepStoreNoPermission({ data = {}, onSave }) {
           lng: storeInfo.lng || null,
           address: storeInfo.location_address || "",
         },
+        products: Object.entries(productData).map(([fmProID, detail]) => {
+          const { _id, ...rest } = detail;
+          return {
+            product_id: fmProID,   // ถ้า backend อยากได้ชื่อ fmProID ก็เปลี่ยนเป็น fmProID: fmProID
+            ...rest,
+          };
+        }),
       };
       delete cleanData.lat;
       delete cleanData.lng;
@@ -194,8 +259,6 @@ export default function StepStoreNoPermission({ data = {}, onSave }) {
         <div className="text-center mb-3">
           <h2 className="font-extrabold text-2xl text-[#0094E5]">ข้อมูลร้านค้า (ไม่อนุญาต)</h2>
         </div>
-
-        {/* ชื่อร้าน */}
         <FormInput
           label="ชื่อร้าน *"
           value={storeInfo.store_name || ""}
@@ -212,11 +275,8 @@ export default function StepStoreNoPermission({ data = {}, onSave }) {
           value={storeInfo.store_number_moo || ""}
           onChange={(v) => setStoreInfo({ ...storeInfo, store_number_moo: v })}
         />
-
-        {/* Province Dropdown */}
         <ProvinceDropdown storeInfo={storeInfo} setStoreInfo={setStoreInfo} userRoute={userRoute} />
 
-        {/* Upload รูปร้าน */}
         <FormUpload
           label={storeInfo.photo_store ? "รูปร้านค้า" : "ถ่ายรูปร้านค้า"}
           value={storeInfo.photo_store}
@@ -225,16 +285,8 @@ export default function StepStoreNoPermission({ data = {}, onSave }) {
           inputRef={fileInputRef}
           error={photoError}
         />
-
         {storeInfo.photo_store && (
           <>
-            {/* ช่องนี้ถูกซ่อน (แต่ค่าถูกเก็บ auto) */}
-            {/* <FormInput
-              label="ที่ตั้งร้าน/รายละเอียดสถานที่"
-              value={storeInfo.location_address}
-              onChange={v => setStoreInfo({ ...storeInfo, location_address: v })}
-              readOnly
-            /> */}
             <div className="flex gap-2">
               <FormInput
                 label="Latitude"
@@ -254,7 +306,6 @@ export default function StepStoreNoPermission({ data = {}, onSave }) {
           </>
         )}
 
-        {/* ลักษณะร้าน */}
         <ShopSizeSelect value={storeInfo.shop_size} onChange={(v) => setStoreInfo({ ...storeInfo, shop_size: v })} />
 
         {/* ประเภทร้าน */}
@@ -286,21 +337,90 @@ export default function StepStoreNoPermission({ data = {}, onSave }) {
           </div>
         </div>
 
-        {/* สถานะสินค้า */}
-        <div>
-          <div className="font-semibold mb-2 text-[#0094E5]">สถานะสินค้า</div>
-          <FormSelectShadcn
-            label="Status FMFR"
-            value={storeInfo.statusFMFR || ""}
-            onChange={(v) => setStoreInfo({ ...storeInfo, statusFMFR: v })}
-            options={PRODUCT_STATUS_OPTIONS}
-          />
-          <FormSelectShadcn
-            label="Status OMG"
-            value={storeInfo.statusOMG || ""}
-            onChange={(v) => setStoreInfo({ ...storeInfo, statusOMG: v })}
-            options={PRODUCT_STATUS_OPTIONS}
-          />
+        {/* ------- Section: รายการสินค้า ------- */}
+        <h2 className="text-2xl font-bold mb-6">รายการสินค้า</h2>
+        {loading && (
+          <div className="text-center text-blue-500 py-10 animate-pulse">
+            กำลังโหลดสินค้า...
+          </div>
+        )}
+        {fetchError && (
+          <div className="text-center text-red-500 mb-4">{fetchError}</div>
+        )}
+        {!loading && !products.length && !fetchError && (
+          <div className="text-center text-gray-400 py-8">ไม่พบรายการสินค้า</div>
+        )}
+
+        <div className="space-y-5 mb-6">
+          {products.map((prod) => {
+            const status = productData[prod.fmProID]?.status || "ไม่พบ";
+            const isAvailable = status === "มีขาย";
+            return (
+              <Card
+                key={prod.fmProID}
+                onClick={() => toggleStatus(prod.fmProID)}
+                className={`rounded-2xl shadow-md border transition hover:shadow-lg cursor-pointer
+                  ${isAvailable
+                    ? "border-green-500 bg-green-50"
+                    : "border-gray-100 bg-white"}`}
+              >
+                <CardContent className="flex gap-4 p-4 items-center">
+                  <div className="flex-shrink-0 relative w-18 rounded-xl overflow-hidden border bg-gray-50">
+                    <img
+                      src={prod.fmProImg || "/no-image.png"}
+                      alt={prod.fmProName}
+                      width={72}
+                      height={72}
+                      className="object-cover rounded-xl"
+                      onError={(e) => { e.currentTarget.src = "/no-image.png"; }}
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-base truncate">
+                      {prod.fmProName}
+                    </div>
+                    <div className="text-xs text-gray-500 mb-1">
+                      รหัส: {prod.fmProID}
+                    </div>
+                    <div className="text-xs text-gray-400 mb-2">
+                      {prod.fmCategory}
+                    </div>
+                    {/* Price inputs: Only FMFR & มีขาย */}
+                    {prod.Owner === "FMFR" && isAvailable && (
+                      <div className="grid grid-cols-3 gap-2 mt-2">
+                        {[
+                          { key: "priceBox", placeholder: "ราคากล่อง" },
+                          { key: "pricePack", placeholder: "ราคาแพ็ค" },
+                          { key: "priceCarton", placeholder: "ราคาลัง" },
+                        ].map(({ key, placeholder }) => (
+                          <input
+                            key={key}
+                            type="number"
+                            min="0"
+                            className="border rounded-lg p-2 text-xs focus:ring-2 focus:ring-primary/30"
+                            placeholder={placeholder}
+                            value={productData[prod.fmProID]?.[key] ?? ""}
+                            onChange={(e) =>
+                              handlePriceChange(prod.fmProID, key, e.target.value)
+                            }
+                            onClick={e => e.stopPropagation()}
+                            onFocus={e => e.stopPropagation()}
+                          />
+                        ))}
+                      </div>
+                    )}
+                    <div className="mt-2 text-xs font-semibold">
+                      {isAvailable ? (
+                        <span className="text-green-600">สถานะ: มีขาย</span>
+                      ) : (
+                        <span className="text-gray-400">สถานะ: ไม่พบ</span>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
 
         {/* เหตุผล */}
@@ -488,20 +608,17 @@ function FormSelectShadcn({ label, value, onChange, options = [], disabled }) {
   return (
     <div>
       <label className="block text-base font-semibold mb-1">{label}</label>
-      <Select value={value || undefined} onValueChange={onChange} disabled={disabled}>
-        <SelectTrigger className="w-full border rounded-xl px-3 py-2">
-          <SelectValue placeholder="เลือก..." />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectGroup>
-            {options.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        </SelectContent>
-      </Select>
+      <select
+        className="w-full border rounded-xl px-3 py-2"
+        value={value || ""}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+      >
+        <option value="">เลือก...</option>
+        {options.map((opt) => (
+          <option key={opt.value} value={opt.value}>{opt.label}</option>
+        ))}
+      </select>
     </div>
   );
 }

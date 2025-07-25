@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import StoreNoPermission from "./Store";
+import StoreNoPermission from "./Store"; // หรือ "./StoreNoPermission"
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
@@ -13,7 +13,7 @@ export default function SurveyWizardNoPermission() {
   const router = useRouter();
 
   // Upload image to S3
-  const uploadImageToS3 = async (file, surID , type) => {
+  const uploadImageToS3 = async (file, surID, type) => {
     const filename = `${surID}_${type}store.jpg`;
     const res = await fetch("/api/servey/upload", {
       method: "POST",
@@ -52,7 +52,8 @@ export default function SurveyWizardNoPermission() {
         photoUrl = await uploadImageToS3(photoUrl, surID);
       }
 
-      // 3. Prepare Payload
+      // 3. Prepare Payload (สำคัญ! products ส่งจาก storeInfo)
+      const products = Array.isArray(storeInfo.products) ? storeInfo.products : [];
       const payload = {
         surID,
         store_info: {
@@ -60,7 +61,7 @@ export default function SurveyWizardNoPermission() {
           photo_store: photoUrl,
           permission: "ไม่อนุญาต",
         },
-        products: [],
+        products, // <<<< ส่ง products ไปด้วย
         market_info: {},
         user_id: storeInfo.user_id,
       };
