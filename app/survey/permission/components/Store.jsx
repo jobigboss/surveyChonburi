@@ -14,12 +14,12 @@ import { useSearchParams } from "next/navigation";
 // ----- CONST -----
 const foremostBlue = "#0094E5";
 const SHOP_SIZE_OPTIONS = [
-  { value: "A", label: "A", desc: "ร้าน 1 คูหา หรือร้านของชำ", images: ["/images/shopA-1.png", "/images/shopA-2.png", "/images/shopA-3.png"] },
-  { value: "B", label: "B", desc: "ร้าน 2 คูหา ขึ้นไป หรือ มินิมาร์ท", images: [] },
-  { value: "C", label: "C", desc: "ซุปเปอร์มาร์เก็ต (ขายทั้งปลีกและส่ง)", images: [] },
-  { value: "D", label: "D", desc: "ร้านยี่ปั้ว/ค้าส่ง", images: [] },
-  { value: "E", label: "E", desc: "ร้านขายสินค้าเด็กโดยเฉพาะ", images: [] },
-  { value: "F", label: "F", desc: "ร้านขายยา", images: [] }
+  { value: "A", label: "A", desc: "ร้าน 1 คูหา หรือร้านของชำ", images: ["/images/shopA/shopA-1.jpg"] }, 
+  { value: "B", label: "B", desc: "ร้าน 2 คูหา ขึ้นไป หรือ มินิมาร์ท", images: ["https://img5.pic.in.th/file/secure-sv1/Screenshot-2024-08-26-110315.png"] }, 
+  { value: "C", label: "C", desc: "ซุปเปอร์มาร์เก็ต (ขายทั้งปลีกและส่ง)", images: ["https://img5.pic.in.th/file/secure-sv1/Screenshot-2024-08-26-110652.png"] }, 
+  { value: "D", label: "D", desc: "ร้านยี่ปั้ว/ค้าส่ง", images: ["https://img5.pic.in.th/file/secure-sv1/Screenshot-2024-08-26-110836.png"] }, 
+  { value: "E", label: "E", desc: "ร้านขายสินค้าเด็กโดยเฉพาะ", images: ["https://img5.pic.in.th/file/secure-sv1/Screenshot-2024-08-26-110947.png"] }, 
+  { value: "F", label: "F", desc: "ร้านขายยา", images: ["https://img2.pic.in.th/pic/Screenshot-2024-11-28-090810.png"] }
 ];
 const SPECIAL_TYPE = [
   { value: "ธงฟ้า", label: "ร้านธงฟ้า" },
@@ -285,7 +285,7 @@ function ShopSizeSelect({ value, onChange }) {
             คุณเลือก: {selected.desc}
           </div>
           {!!selected.images?.length && (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+            <div className="md:grid-cols-3 gap-2">
               {selected.images.map((img, idx) => (
                 <img
                   key={idx}
@@ -470,29 +470,6 @@ export default function Step1StoreInfo({ data = {}, onNext }) {
           <h2 className="font-extrabold text-2xl text-[#0094E5]">ข้อมูลร้านค้า</h2>
         </div>
 
-        <FormInput
-          label="ชื่อร้าน *"
-          value={storeInfo.store_name || ""}
-          onChange={v => setStoreInfo({ ...storeInfo, store_name: v })}
-          required
-        />
-        <FormInput
-          label="บ้านเลขที่"
-          value={storeInfo.store_number_address || ""}
-          onChange={v => setStoreInfo({ ...storeInfo, store_number_address: v })}
-        />
-        <FormInput
-          label="หมู่ที่"
-          value={storeInfo.store_number_moo || ""}
-          onChange={v => setStoreInfo({ ...storeInfo, store_number_moo: v })}
-        />
-
-        <ProvinceDropdown
-          storeInfo={storeInfo}
-          setStoreInfo={setStoreInfo}
-          userId={userIdFromQuery}
-        />
-
         <FormUpload
           label={storeInfo.photo_store ? "รูปร้านค้า" : "ถ่ายรูปร้านค้า"}
           value={storeInfo.photo_store}
@@ -529,6 +506,29 @@ export default function Step1StoreInfo({ data = {}, onNext }) {
             {geoError && <div className="text-xs text-red-500 mt-2">{geoError}</div>}
           </>
         )}
+
+        <FormInput
+          label="ชื่อร้าน *"
+          value={storeInfo.store_name || ""}
+          onChange={v => setStoreInfo({ ...storeInfo, store_name: v })}
+          required
+        />
+        <FormInput
+          label="บ้านเลขที่"
+          value={storeInfo.store_number_address || ""}
+          onChange={v => setStoreInfo({ ...storeInfo, store_number_address: v })}
+        />
+        <FormInput
+          label="หมู่ที่"
+          value={storeInfo.store_number_moo || ""}
+          onChange={v => setStoreInfo({ ...storeInfo, store_number_moo: v })}
+        />
+
+        <ProvinceDropdown
+          storeInfo={storeInfo}
+          setStoreInfo={setStoreInfo}
+          userId={userIdFromQuery}
+        />
 
         <ShopSizeSelect value={storeInfo.shop_size} onChange={v => setStoreInfo({ ...storeInfo, shop_size: v })} />
 

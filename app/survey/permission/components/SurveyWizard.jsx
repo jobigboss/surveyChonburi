@@ -249,11 +249,23 @@ export default function SurveyWizard() {
           <DialogDescription className="text-center text-lg mb-2">
             รหัสแบบสอบถามของคุณ<br />
             <span className="font-bold text-xl bg-gray-100 px-3 py-1 rounded block mt-2">{successSurID}</span>
-            <span className="text-xs text-green-600 mt-2 block">(คัดลอกอัตโนมัติแล้ว)</span>
+            <span className="text-xs text-green-600 mt-2 block">กดปุ่มด้านล่างเพื่อคัดลอก</span>
           </DialogDescription>
           <DialogFooter className="flex flex-col gap-2 items-center w-full">
             <Button
-              className="w-full"
+              className="w-56"
+              onClick={() => {
+                navigator.clipboard.writeText(successSurID).then(() => {
+                  alert("คัดลอกแล้ว!");
+                }).catch(() => {
+                  alert("กรุณาคัดลอกด้วยตัวเอง");
+                });
+              }}
+            >
+              คัดลอกโค้ด
+            </Button>
+            <Button
+              className="w-56"
               onClick={() => {
                 router.push(`/survey?user_id=${userIdSuccess}`);
                 setShowSuccess(false);
