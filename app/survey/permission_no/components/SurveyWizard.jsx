@@ -109,26 +109,28 @@ export default function SurveyWizardNoPermission() {
           <DialogTitle className="text-2xl text-center mb-1">🎉 บันทึกสำเร็จ</DialogTitle>
           <DialogDescription className="text-center text-lg mb-2">
             รหัสแบบสอบถามของคุณ<br />
-            <span className="font-bold text-xl bg-gray-100 px-3 py-1 rounded block mt-2">
-              {successSurID}
-            </span>
-            <span className="text-xs text-green-600 mt-2 block">กดปุ่มด้านล่างเพื่อคัดลอก</span>
+            <div className="flex flex-col items-center gap-2 mt-3">
+              <span className="text-xs text-green-600">กดปุ่มด้านล่างเพื่อคัดลอก</span>
+              <Button
+                className="w-40 h-8 text-sm"
+                onClick={() => {
+                  navigator.clipboard.writeText(successSurID).then(() => {
+                    alert("คัดลอกแล้ว!");
+                  }).catch(() => {
+                    alert("กรุณาคัดลอกด้วยตัวเอง");
+                  });
+                }}
+              >
+                คัดลอกโค้ด
+              </Button>
+              <span className="font-bold text-xl bg-gray-100 px-3 py-1 rounded">
+                {successSurID}
+              </span>
+            </div>
           </DialogDescription>
-          <DialogFooter className="flex flex-col gap-2 items-center w-full">
+          <DialogFooter className="flex flex-col items-center gap-2 mt-0">
             <Button
-              className="w-52"
-              onClick={() => {
-                navigator.clipboard.writeText(successSurID).then(() => {
-                  alert("คัดลอกแล้ว!");
-                }).catch(() => {
-                  alert("กรุณาคัดลอกด้วยตัวเอง");
-                });
-              }}
-            >
-              คัดลอกโค้ด
-            </Button>
-            <Button
-              className="w-52"
+              className="w-40 h-8 text-sm"
               onClick={() => {
                 router.push(`/survey?user_id=${userIdSuccess}`);
                 setShowSuccess(false);

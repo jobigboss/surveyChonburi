@@ -1,11 +1,13 @@
-import React from 'react'
+"use client";
+import React from 'react';
+import Dashboard from './components/dashboard_emp';
 
 function DashboardPage() {
   return (
     <div>
-      Hello DashboardPage
+      <Dashboard />
     </div>
   )
 }
 
-export default DashboardPage
+export default DashboardPage;

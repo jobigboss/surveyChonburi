@@ -17,9 +17,9 @@ const SHOP_SIZE_OPTIONS = [
   { value: "A", label: "A", desc: "ร้าน 1 คูหา หรือร้านของชำ", images: ["/images/shopA/shopA-1.jpg"] }, 
   { value: "B", label: "B", desc: "ร้าน 2 คูหา ขึ้นไป หรือ มินิมาร์ท", images: ["https://img5.pic.in.th/file/secure-sv1/Screenshot-2024-08-26-110315.png"] }, 
   { value: "C", label: "C", desc: "ซุปเปอร์มาร์เก็ต (ขายทั้งปลีกและส่ง)", images: ["https://img5.pic.in.th/file/secure-sv1/Screenshot-2024-08-26-110652.png"] }, 
-  { value: "D", label: "D", desc: "ร้านยี่ปั้ว/ค้าส่ง", images: ["https://img5.pic.in.th/file/secure-sv1/Screenshot-2024-08-26-110836.png"] }, 
+  { value: "D", label: "D", desc: "ร้านยี่ปั้ว/ค้าส่ง", images: ["/images/shopD/shopD-1.jpg"] }, 
   { value: "E", label: "E", desc: "ร้านขายสินค้าเด็กโดยเฉพาะ", images: ["https://img5.pic.in.th/file/secure-sv1/Screenshot-2024-08-26-110947.png"] }, 
-  { value: "F", label: "F", desc: "ร้านขายยา", images: ["https://img2.pic.in.th/pic/Screenshot-2024-11-28-090810.png"] }
+  { value: "F", label: "F", desc: "ร้านขายยา", images: ["/images/shopF/shopF-1.jpg"] }
 ];
 const SPECIAL_TYPE = [
   { value: "ธงฟ้า", label: "ร้านธงฟ้า" },
