@@ -1,11 +1,11 @@
 "use client";
 import React from 'react';
-import Dashboard from './components/dashboard_emp';
+// import Dashboard from './components/dashboard_emp';
 
 function DashboardPage() {
   return (
     <div>
-      <Dashboard />
+      {/* <Dashboard /> */}
     </div>
   )
 }
