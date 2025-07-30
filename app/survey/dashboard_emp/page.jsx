@@ -45,38 +45,31 @@ const DashboardEmp = () => {
   }, [searchParams]);
 
   // --- Fetch user route (สายวิ่ง) robust: เทียบ user_id แบบไม่แคร์คอมม่า/เว้นวรรค
-useEffect(() => {
-  const user_id = searchParams.get("user_id");
-  if (!user_id) {
-    setUserRoute("-");
-    return;
-  }
-  setRouteLoading(true);
-  fetch(`/api/servey/get/user?user_id=${user_id}`) 
-    .then(res => res.json())
-    .then(users => {
-      let route = "-";
-      if (Array.isArray(users) && users.length > 0) {
-        // Debug log
-        // console.log("user list from DB:", users);
-        // console.log("user_id param:", user_id);
-
-        // Clean both user_id for matching
-        const cleanId = (user_id + "").replace(/[^a-zA-Z0-9]/g, "");
-        const user = users.find(
-          u => ((u.user_id || "") + "").replace(/[^a-zA-Z0-9]/g, "") === cleanId
-        );
-        // console.log("matched user:", user);
-        if (user && user.route) {
-          route = (user.route + "").replace(/,+$/, "").trim();
+  useEffect(() => {
+    const user_id = searchParams.get("user_id");
+    if (!user_id) {
+      setUserRoute("-");
+      return;
+    }
+    setRouteLoading(true);
+    fetch(`/api/servey/get/user?user_id=${user_id}`)
+      .then(res => res.json())
+      .then(users => {
+        let route = "-";
+        if (Array.isArray(users) && users.length > 0) {
+          const cleanId = (user_id + "").replace(/[^a-zA-Z0-9]/g, "");
+          const user = users.find(
+            u => ((u.user_id || "") + "").replace(/[^a-zA-Z0-9]/g, "") === cleanId
+          );
+          if (user && user.route) {
+            route = (user.route + "").replace(/,+$/, "").trim();
+          }
         }
-      }
-      setUserRoute(route || "-");
-    })
-    .catch(() => setUserRoute("-"))
-    .finally(() => setRouteLoading(false));
-}, [searchParams]);
- 
+        setUserRoute(route || "-");
+      })
+      .catch(() => setUserRoute("-"))
+      .finally(() => setRouteLoading(false));
+  }, [searchParams]);
 
   const handleExpand = (zone, dayId) => {
     setOpenRow(prev => ({
@@ -118,7 +111,7 @@ useEffect(() => {
       `รวมร้านที่เข้า  :  ${day.totalStores || 0} ร้าน`,
       ``,
       `สถานะสำรวจ:`,
-      `ร้านอนุญาตให้สำรวจ:  $userRoute{day.allow || 0} ร้าน`,
+      `ร้านอนุญาตให้สำรวจ:  ${day.allow || 0} ร้าน`,
       `ร้านไม่อนุญาตให้สำรวจ:  ${day.deny || 0} ร้าน`,
       ``,
       `สถานะสินค้า`,
