@@ -76,7 +76,7 @@ useEffect(() => {
     .catch(() => setUserRoute("-"))
     .finally(() => setRouteLoading(false));
 }, [searchParams]);
-
+ 
 
   const handleExpand = (zone, dayId) => {
     setOpenRow(prev => ({
