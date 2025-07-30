@@ -11,6 +11,9 @@ export default function ReportPage() {
   const router = useRouter();
   const [productList, setProductList] = useState([]);
   const [fetchError, setFetchError] = useState("");
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(100);
+  const [total, setTotal] = useState(0);
 
   // ✅ Filter State
   const [startDate, setStartDate] = useState("");
@@ -19,17 +22,19 @@ export default function ReportPage() {
 
   // ✅ โหลดข้อมูลรายงาน
   useEffect(() => {
-    fetch("/api/servey/report/get-report")
+    setLoading(true);
+    fetch(`/api/servey/report/get-report?page=${page}&limit=${limit}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
           setReports(data.reports);
           setFilteredReports(data.reports);
+          setTotal(data.total);
         }
       })
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
-  }, []);
+  }, [page, limit]);
 
   // ✅ โหลดข้อมูลสินค้า
   useEffect(() => {
@@ -108,6 +113,41 @@ export default function ReportPage() {
           </button>
         </div>
 
+        <div className="flex justify-between items-center mb-2">
+          <select
+            value={limit}
+            onChange={(e) => {
+              setLimit(Number(e.target.value));
+              setPage(1); // reset ไปหน้าแรก
+            }}
+            className="border p-2 rounded-lg"
+          >
+            {[25, 50, 75, 100].map((n) => (
+              <option key={n} value={n}>
+                {n} รายการ / หน้า
+              </option>
+            ))}
+          </select>
+
+          <div className="space-x-2">
+            <button
+              disabled={page === 1}
+              onClick={() => setPage(page - 1)}
+              className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+            >
+              ◀
+            </button>
+            <span>หน้า {page} / {Math.ceil(total / limit)}</span>
+            <button
+              disabled={page * limit >= total}
+              onClick={() => setPage(page + 1)}
+              className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+            >
+              ▶
+            </button>
+          </div>
+        </div>
+
         {/* ✅ Filter */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-gray-50 p-4 rounded-lg mb-4">
           <div>
@@ -168,7 +208,7 @@ export default function ReportPage() {
             <table className="w-full border border-gray-200 text-sm">
               <thead>
                 <tr className="bg-gray-200 text-left">
-                  <th className="p-3 border">#</th>
+                  <th className="p-3 border">ลำดับ</th>
                   <th className="p-3 border">ชื่อร้าน</th>
                   <th className="p-3 border">สินค้าในระบบ</th>
                   <th className="p-3 border">ความต้องการซื้อ</th>
