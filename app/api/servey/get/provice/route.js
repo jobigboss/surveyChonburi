@@ -1,16 +1,27 @@
-// api/servey/get/provice/route.js
+// /api/servey/get/provice/route.js
+
 import { NextResponse } from "next/server";
-import { connectMongoDB } from "../../../../../lib/mongodb"; // <- ตรงนี้ต้อง 'connectMongoDB'
+import { connectMongoDB } from "../../../../../lib/mongodb";
 import Province from "../../../../../models/provice";
 
 export async function GET() {
-    try {
-        await connectMongoDB();
-        const province = await Province.find({});
-        console.log("Fetched province:", province);
-        return NextResponse.json(province);
-    } catch (error) {
-        console.error("Error fetching province:", error);
-        return NextResponse.json({ message: "Error fetching province", error }, { status: 500 });
-    }
+  try {
+    await connectMongoDB();
+
+    // ดึงเฉพาะ document ที่มี Route หรือ route
+    const filteredProvince = await Province.find({
+      $or: [
+        { Route: { $exists: true, $ne: null } },
+        { route: { $exists: true, $ne: null } }
+      ]
+    });
+
+    return NextResponse.json(filteredProvince);
+  } catch (error) {
+    console.error("Error fetching province:", error);
+    return NextResponse.json(
+      { message: "Error fetching province", error },
+      { status: 500 }
+    );
+  }
 }
