@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import ReportPage from "./components/reportPage";
 import Contact from "./components/Contact";
+import Product from "./components/Product";
 
 const tabs = [
   { key: "performance", label: "Performance" },
@@ -62,21 +63,7 @@ export default function ReportTabs() {
         )}
         {activeTab === "product" && (
           <div>
-            <div className="text-2xl font-bold mb-5 text-blue-800">สินค้า</div>
-            <ul className="divide-y rounded-xl overflow-hidden border border-gray-100 bg-white">
-              <li className="py-4 px-6 flex justify-between items-center">
-                <span className="font-medium">Pepsi</span>
-                <span className="text-gray-500">20 ชิ้น</span>
-              </li>
-              <li className="py-4 px-6 flex justify-between items-center">
-                <span className="font-medium">Coke</span>
-                <span className="text-gray-500">18 ชิ้น</span>
-              </li>
-              <li className="py-4 px-6 flex justify-between items-center">
-                <span className="font-medium">Sprite</span>
-                <span className="text-gray-500">10 ชิ้น</span>
-              </li>
-            </ul>
+            <Product/>
           </div>
         )}
         {activeTab === "contact" && (
