@@ -16,7 +16,7 @@ export default function ReportTabs() {
   const router = useRouter();
 
   return (
-    <div className="w-full max-w-5xl mx-auto mt-10 px-2">
+    <div className="w-full  mx-auto mt-10 px-2">
       {/* Header Row */}
       <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
         {/* Tabs */}

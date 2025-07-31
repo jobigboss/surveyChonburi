@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useMemo } from "react";
-import useSWR from "swr";
+import React, { useState, useEffect } from "react";
 import { ShoppingBag, MapPin, XCircle, Search } from "lucide-react";
+import useSWR from "swr";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 
-// --- PRODUCT COLUMNS (สินค้าที่ต้องแยก column) ---
+// --- PRODUCT COLUMNS ---
 const PRODUCT_COLS = [
   "Omega Gold 1+ รสจืด 180ml",
   "Omega Gold 4+ รสจืด 180ml",
@@ -18,7 +18,6 @@ const PRODUCT_COLS = [
   "Foremost ช็อกโกแลตผสมธัญพืชรวม 180ml",
 ];
 
-// --- Utils ---
 function cutDecimal(val, digits = 6) {
   if (typeof val !== "string") val = String(val ?? "");
   const [intPart, decimal = ""] = val.split(".");
@@ -52,7 +51,7 @@ function OrderModal({ open, onClose, products }) {
           <ShoppingBag size={22} /> สินค้าที่สนใจ
         </div>
         {filtered.length === 0 ? (
-          <div className="text-gray-400 py-10 text-center">ไม่มีรายการใบสั่งซื้อ</div>
+          <div className="text-gray-400 py-10 text-center">ไม่มีรายการ</div>
         ) : (
           <table className="w-full">
             <thead>
@@ -82,7 +81,6 @@ function OrderModal({ open, onClose, products }) {
   );
 }
 
-// --- Skeleton Loader สำหรับ Table
 function TableSkeleton({ rows = 10 }) {
   return (
     <>
@@ -99,54 +97,6 @@ function TableSkeleton({ rows = 10 }) {
   );
 }
 
-// --- Export Excel (all data)
-async function handleExportAll({ search, startDate, endDate }) {
-  // ดึงข้อมูลทุกหน้า (ไม่จำกัด page)
-  const url = `/api/servey/report/contact?all=1`
-    + `&search=${encodeURIComponent(search)}`
-    + `&startDate=${encodeURIComponent(startDate)}`
-    + `&endDate=${encodeURIComponent(endDate)}`;
-  const res = await fetch(url);
-  const json = await res.json();
-  exportRowsToExcel(json.data || []);
-}
-
-function exportRowsToExcel(rows) {
-  if (!rows || !rows.length) return;
-
-  const excelRows = rows.map(row => {
-    // Map ชื่อสินค้า → qty
-    const prodMap = {};
-    (row.interest_products || []).forEach(p => {
-      prodMap[p.name] = (p.qty ?? 0);
-    });
-
-    // Gen row object (หัวหลัก)
-    const obj = {
-      "วันที่สร้าง": formatDate(row.createdAt),
-      "ชื่อร้านค้า": row.store_name,
-      "ผู้ติดต่อ": row.contact,
-      "เบอร์โทร": row.phone,
-      "Latitude": row.lat ? cutDecimal(row.lat, 6) : "",
-      "Longitude": row.lng ? cutDecimal(row.lng, 6) : "",
-      "ที่อยู่": row.address,
-      "ID": row.surID,
-    };
-    // Loop ใส่สินค้า 10 ช่อง
-    PRODUCT_COLS.forEach(name => {
-      obj[name] = prodMap[name] ?? 0;
-    });
-    return obj;
-  });
-
-  const ws = XLSX.utils.json_to_sheet(excelRows);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Report");
-  const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-  saveAs(new Blob([buf], { type: "application/octet-stream" }), `report_${Date.now()}.xlsx`);
-}
-
-// --- Table Row
 function ContactTableRow({ data }) {
   const [modalOpen, setModalOpen] = useState(false);
   const mapUrl = `https://maps.google.com/?q=${data.lat},${data.lng}`;
@@ -157,20 +107,20 @@ function ContactTableRow({ data }) {
       <td className="p-2 text-gray-500 whitespace-nowrap">{formatDate(data.createdAt)}</td>
       <td className="p-2 text-gray-900 font-semibold whitespace-nowrap">{data.store_name}</td>
       <td className="p-2 text-blue-800 whitespace-nowrap">{data.contact}</td>
-      <td className="p-2 text-emerald-700 whitespace-nowrap" style={{minWidth: '120px'}}>{data.phone}</td>
-      <td className="p-2 text-blue-800 whitespace-nowrap" style={{minWidth: '100px'}}>
+      <td className="p-2 text-emerald-700 whitespace-nowrap" style={{ minWidth: '120px' }}>{data.phone}</td>
+      <td className="p-2 text-blue-800 whitespace-nowrap" style={{ minWidth: '100px' }}>
         {data.lat ? cutDecimal(data.lat, 6) : "-"}
       </td>
-      <td className="p-2 text-blue-800 whitespace-nowrap" style={{minWidth: '100px'}}>
+      <td className="p-2 text-blue-800 whitespace-nowrap" style={{ minWidth: '100px' }}>
         {data.lng ? cutDecimal(data.lng, 6) : "-"}
       </td>
-      <td className="p-2" style={{minWidth:'90px'}}>
+      <td className="p-2" style={{ minWidth: '90px' }}>
         <button
           className="flex items-center gap-1 border-2 border-emerald-400 rounded-full px-2 py-0.5 bg-white hover:bg-emerald-50 transition"
           onClick={() => setModalOpen(true)}
         >
           <ShoppingBag size={18} className="text-emerald-600" />
-          <span className="sr-only">ใบสั่งซื้อ</span>
+          <span className="sr-only">สินค้าที่สนใจ</span>
           <span className="flex items-center bg-emerald-100 border border-emerald-300 text-emerald-700 font-bold px-2 ml-1 rounded-full text-base min-w-[30px] justify-center">
             {orderCount}
           </span>
@@ -181,7 +131,7 @@ function ContactTableRow({ data }) {
           products={data.interest_products}
         />
       </td>
-      <td className="p-2" style={{minWidth:'70px'}}>
+      <td className="p-2" style={{ minWidth: '70px' }}>
         <a
           href={mapUrl}
           target="_blank"
@@ -198,51 +148,75 @@ function ContactTableRow({ data }) {
   );
 }
 
-// --- Main Table
+// --------- MAIN COMPONENT ---------
 export default function ContactTable() {
-  const today = new Date().toISOString().slice(0,10); // yyyy-mm-dd
-  const sevenDaysAgo = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString().slice(0,10);
+  const today = new Date().toISOString().slice(0, 10);
+  const sevenDaysAgo = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const [startDate, setStartDate] = useState(sevenDaysAgo);
   const [endDate, setEndDate] = useState(today);
   const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-  const [query, setQuery] = useState(null);   // ให้เป็น string key
-  const limit = 20;
+  const [activeProvince, setActiveProvince] = useState(""); // จังหวัดปัจจุบัน
 
-  const validEndDate = endDate >= startDate && endDate <= today;
-  const validStartDate = startDate <= today;
+  // Fetch data ทุกจังหวัด (all=1)
+  const url =
+    `/api/servey/report/contact?all=1`
+    + `&search=${encodeURIComponent(search)}`
+    + `&startDate=${encodeURIComponent(startDate)}`
+    + `&endDate=${encodeURIComponent(endDate)}`;
 
-  // stable query string key (string)
-  const stableKey = useMemo(() => {
-    if (!query) return null;
-    return `/api/servey/report/contact?page=${page}&limit=${limit}&search=${encodeURIComponent(query.search)}&startDate=${encodeURIComponent(query.startDate)}&endDate=${encodeURIComponent(query.endDate)}`;
-    // eslint-disable-next-line
-  }, [query, page]);
+  const { data, isLoading } = useSWR(url, fetcher);
 
-  const { data, error, isLoading } = useSWR(
-    stableKey,
-    fetcher,
-    { keepPreviousData: true, revalidateOnFocus: false }
-  );
-
-  const rows = data?.data || [];
-  const pagination = data?.pagination || { page: 1, totalPage: 1, total: 0 };
-
-  // โหลดข้อมูลทั้งหมดทันทีเมื่อเปิดหน้าครั้งแรก (เรียงล่าสุดก่อน)
-  useEffect(() => {
-    setQuery({ search: "", startDate: sevenDaysAgo, endDate: today });
-    setPage(1);
-    // eslint-disable-next-line
-  }, []);
-
-  function handleSearch() {
-    if (!validEndDate || !validStartDate) return;
-    setQuery({
-      search,
-      startDate,
-      endDate,
+  // Group by จังหวัด
+  const groupedByProvince = React.useMemo(() => {
+    const group = {};
+    (data?.data || []).forEach(row => {
+      const pv = row?.address?.split(" ")?.slice(-2, -1)?.[0] || "-"; // หรือใช้ row.province ถ้ามี field นี้
+      if (!group[pv]) group[pv] = [];
+      group[pv].push(row);
     });
-    setPage(1);
+    return group;
+  }, [data]);
+
+  // รายชื่อจังหวัดในข้อมูล
+  const provinces = Object.keys(groupedByProvince);
+
+  // activeProvince default: จังหวัดแรก
+  useEffect(() => {
+    if (provinces.length && !activeProvince) setActiveProvince(provinces[0]);
+  }, [provinces, activeProvince]);
+
+  function handleExportAll() {
+    // แยก sheet ตามจังหวัด
+    if (!data?.data?.length) return;
+
+    const wb = XLSX.utils.book_new();
+    provinces.forEach(pv => {
+      const rows = groupedByProvince[pv];
+      const excelRows = rows.map(row => {
+        const prodMap = {};
+        (row.interest_products || []).forEach(p => {
+          prodMap[p.name] = (p.qty ?? 0);
+        });
+        const obj = {
+          "วันที่สร้าง": formatDate(row.createdAt),
+          "ชื่อร้านค้า": row.store_name,
+          "ผู้ติดต่อ": row.contact,
+          "เบอร์โทร": row.phone,
+          "Latitude": row.lat ? cutDecimal(row.lat, 6) : "",
+          "Longitude": row.lng ? cutDecimal(row.lng, 6) : "",
+          "ที่อยู่": row.address,
+          "ID": row.surID,
+        };
+        PRODUCT_COLS.forEach(name => {
+          obj[name] = prodMap[name] ?? 0;
+        });
+        return obj;
+      });
+      const ws = XLSX.utils.json_to_sheet(excelRows);
+      XLSX.utils.book_append_sheet(wb, ws, pv || "จังหวัดไม่ระบุ");
+    });
+    const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    saveAs(new Blob([buf], { type: "application/octet-stream" }), `report_by_province_${Date.now()}.xlsx`);
   }
 
   return (
@@ -268,7 +242,7 @@ export default function ContactTable() {
                 if (endDate < e.target.value) setEndDate(e.target.value);
               }}
               className="border border-gray-200 rounded px-2 py-1"
-              style={{minWidth:120}}
+              style={{ minWidth: 120 }}
             />
           </div>
           <div className="flex items-center gap-1">
@@ -280,28 +254,21 @@ export default function ContactTable() {
               value={endDate}
               onChange={e => setEndDate(e.target.value)}
               className="border border-gray-200 rounded px-2 py-1"
-              style={{minWidth:120}}
+              style={{ minWidth: 120 }}
             />
           </div>
           <button
             className="flex gap-1 items-center bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold shadow"
-            onClick={handleSearch}
-            disabled={!validEndDate || !validStartDate}
+            onClick={() => {}} // รีเฟรช swr อยู่แล้ว ไม่ต้อง handle
           >
             <Search size={18} /> ค้นหา
           </button>
-          {!validEndDate && (
-            <span className="text-red-600 text-xs font-medium ml-2">
-              วันที่สิ้นสุดต้องไม่เร็วกว่าวันที่เริ่มต้น และไม่เกินวันนี้
-            </span>
-          )}
-          <span className="text-sm text-gray-500 ml-2">{pagination.total} ร้านค้า</span>
+          <span className="text-sm text-gray-500 ml-2">{data?.pagination?.total ?? 0} ร้านค้า</span>
         </div>
-        {/* Export Button */}
         <button
           type="button"
           className="flex gap-1 items-center bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-bold shadow"
-          onClick={() => handleExportAll({ search, startDate, endDate })}
+          onClick={handleExportAll}
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4" />
@@ -309,10 +276,29 @@ export default function ContactTable() {
           Export Excel
         </button>
       </div>
+
+      {/* --- Province Tabs --- */}
+      <div className="flex gap-2 mb-3 overflow-x-auto">
+        {provinces.map(pv => (
+          <button
+            key={pv}
+            className={`px-4 py-2 rounded-t-xl font-bold border-b-2 ${
+              pv === activeProvince
+                ? "bg-white border-blue-600 text-blue-700 shadow"
+                : "bg-blue-50 border-transparent text-blue-400"
+            }`}
+            onClick={() => setActiveProvince(pv)}
+          >
+            {pv}
+          </button>
+        ))}
+      </div>
+
+      {/* --- Table --- */}
       <div className="overflow-x-auto bg-gradient-to-b from-blue-50 to-white rounded-3xl shadow-2xl border border-blue-100">
         <table className="min-w-[1200px] w-full text-sm border-separate border-spacing-0 rounded-3xl overflow-hidden">
           <caption className="text-left px-4 py-2 text-blue-600 font-medium caption-top bg-white rounded-t-3xl mb-1 shadow-sm">
-            รายงานร้านค้าทั้งหมด (คลิก “ใบสั่งซื้อ” หรือ “เดินทาง”)
+            รายงานร้านค้าทั้งหมด
           </caption>
           <thead>
             <tr className="bg-blue-200 text-blue-900 text-base font-bold shadow-sm">
@@ -329,8 +315,8 @@ export default function ContactTable() {
             </tr>
           </thead>
           <tbody>
-            {isLoading && <TableSkeleton rows={limit} />}
-            {!isLoading && rows.length === 0 && (
+            {isLoading && <TableSkeleton rows={15} />}
+            {!isLoading && groupedByProvince[activeProvince]?.length === 0 && (
               <tr>
                 <td colSpan={10} className="text-center py-8 text-gray-400 bg-white">
                   ไม่มีข้อมูล
@@ -338,31 +324,12 @@ export default function ContactTable() {
               </tr>
             )}
             {!isLoading &&
-              rows.map((row, i) => (
+              groupedByProvince[activeProvince]?.map((row, i) => (
                 <ContactTableRow data={row} key={i} />
               ))
             }
           </tbody>
         </table>
-      </div>
-      <div className="flex gap-2 mt-6 items-center justify-center">
-        <button
-          className="px-4 py-2 rounded-2xl bg-gray-100 hover:bg-blue-100 font-bold shadow disabled:opacity-40"
-          onClick={() => setPage(p => Math.max(1, p - 1))}
-          disabled={page <= 1 || !stableKey}
-        >
-          ⬅️ ก่อนหน้า
-        </button>
-        <span className="font-medium text-gray-700">
-          หน้า <span className="text-blue-600">{pagination.page}</span> / {pagination.totalPage}
-        </span>
-        <button
-          className="px-4 py-2 rounded-2xl bg-gray-100 hover:bg-blue-100 font-bold shadow disabled:opacity-40"
-          onClick={() => setPage(p => Math.min(pagination.totalPage, p + 1))}
-          disabled={page >= pagination.totalPage || !stableKey}
-        >
-          ถัดไป ➡️
-        </button>
       </div>
     </div>
   );
