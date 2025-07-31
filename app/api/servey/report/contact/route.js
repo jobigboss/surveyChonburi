@@ -14,9 +14,11 @@ export async function GET(req) {
     const limit = parseInt(searchParams.get("limit") || "20", 10);
     const search = searchParams.get("search") || "";
 
-    // NEW: อ่านช่วงวันที่จาก query
     const startDate = searchParams.get("startDate"); // yyyy-mm-dd
     const endDate = searchParams.get("endDate");     // yyyy-mm-dd
+
+    // NEW: ถ้ามี all=1 ใน query, ให้ export ข้อมูลทั้งหมด (ไม่แบ่งหน้า)
+    const exportAll = searchParams.get("all") === "1";
 
     // เงื่อนไข query
     const query = {
@@ -30,7 +32,6 @@ export async function GET(req) {
 
     // Filter ช่วงวันที่ (ถ้ามี)
     if (startDate && endDate) {
-      // ใช้เวลาตั้งแต่ 00:00:00 ถึง 23:59:59 ของวันสิ้นสุด
       query.createdAt = {
         $gte: new Date(startDate + "T00:00:00.000Z"),
         $lte: new Date(endDate + "T23:59:59.999Z"),
@@ -39,11 +40,20 @@ export async function GET(req) {
 
     const total = await Survey.countDocuments(query);
 
-    const docs = await Survey.find(query)
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .lean();
+    // ถ้า export ทั้งหมด (all=1) → ไม่ skip, ไม่ limit (แต่ควรใส่ max limit กัน crash)
+    let docs;
+    if (exportAll) {
+      docs = await Survey.find(query)
+        .sort({ createdAt: -1 })
+        .limit(20000) // กัน data เยอะเกินไป, ปรับเพิ่ม/ลดได้
+        .lean();
+    } else {
+      docs = await Survey.find(query)
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean();
+    }
 
     const data = docs.map(d => ({
       createdAt: d.createdAt,

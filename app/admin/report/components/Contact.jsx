@@ -1,8 +1,24 @@
 import React, { useState, useEffect, useMemo } from "react";
 import useSWR from "swr";
 import { ShoppingBag, MapPin, XCircle, Search } from "lucide-react";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 
-// Utils
+// --- PRODUCT COLUMNS (สินค้าที่ต้องแยก column) ---
+const PRODUCT_COLS = [
+  "Omega Gold 1+ รสจืด 180ml",
+  "Omega Gold 4+ รสจืด 180ml",
+  "Omega รสจืด 110ml",
+  "Omega รสจืด 180ml",
+  "Omega รสหวาน 180ml",
+  "Omega รสช็อกโกแลต 180ml",
+  "Foremost รสจืด 225ml",
+  "Foremost รสช็อกโกแลต 225ml",
+  "Foremost รสช็อกโกแลต 165ml",
+  "Foremost ช็อกโกแลตผสมธัญพืชรวม 180ml",
+];
+
+// --- Utils ---
 function cutDecimal(val, digits = 6) {
   if (typeof val !== "string") val = String(val ?? "");
   const [intPart, decimal = ""] = val.split(".");
@@ -19,7 +35,7 @@ function formatDate(d) {
 }
 const fetcher = url => fetch(url).then(res => res.json());
 
-// Modal
+// --- Modal
 function OrderModal({ open, onClose, products }) {
   const filtered = (products || []).filter(p => (p.qty ?? 0) > 0);
   if (!open) return null;
@@ -66,7 +82,7 @@ function OrderModal({ open, onClose, products }) {
   );
 }
 
-// Skeleton Loader สำหรับ Table
+// --- Skeleton Loader สำหรับ Table
 function TableSkeleton({ rows = 10 }) {
   return (
     <>
@@ -83,7 +99,54 @@ function TableSkeleton({ rows = 10 }) {
   );
 }
 
-// Table Row
+// --- Export Excel (all data)
+async function handleExportAll({ search, startDate, endDate }) {
+  // ดึงข้อมูลทุกหน้า (ไม่จำกัด page)
+  const url = `/api/servey/report/contact?all=1`
+    + `&search=${encodeURIComponent(search)}`
+    + `&startDate=${encodeURIComponent(startDate)}`
+    + `&endDate=${encodeURIComponent(endDate)}`;
+  const res = await fetch(url);
+  const json = await res.json();
+  exportRowsToExcel(json.data || []);
+}
+
+function exportRowsToExcel(rows) {
+  if (!rows || !rows.length) return;
+
+  const excelRows = rows.map(row => {
+    // Map ชื่อสินค้า → qty
+    const prodMap = {};
+    (row.interest_products || []).forEach(p => {
+      prodMap[p.name] = (p.qty ?? 0);
+    });
+
+    // Gen row object (หัวหลัก)
+    const obj = {
+      "วันที่สร้าง": formatDate(row.createdAt),
+      "ชื่อร้านค้า": row.store_name,
+      "ผู้ติดต่อ": row.contact,
+      "เบอร์โทร": row.phone,
+      "Latitude": row.lat ? cutDecimal(row.lat, 6) : "",
+      "Longitude": row.lng ? cutDecimal(row.lng, 6) : "",
+      "ที่อยู่": row.address,
+      "ID": row.surID,
+    };
+    // Loop ใส่สินค้า 10 ช่อง
+    PRODUCT_COLS.forEach(name => {
+      obj[name] = prodMap[name] ?? 0;
+    });
+    return obj;
+  });
+
+  const ws = XLSX.utils.json_to_sheet(excelRows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Report");
+  const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+  saveAs(new Blob([buf], { type: "application/octet-stream" }), `report_${Date.now()}.xlsx`);
+}
+
+// --- Table Row
 function ContactTableRow({ data }) {
   const [modalOpen, setModalOpen] = useState(false);
   const mapUrl = `https://maps.google.com/?q=${data.lat},${data.lng}`;
@@ -135,7 +198,7 @@ function ContactTableRow({ data }) {
   );
 }
 
-// Main Table
+// --- Main Table
 export default function ContactTable() {
   const today = new Date().toISOString().slice(0,10); // yyyy-mm-dd
   const sevenDaysAgo = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString().slice(0,10);
@@ -184,53 +247,67 @@ export default function ContactTable() {
 
   return (
     <div className="p-4 max-w-[1400px] mx-auto">
-      <div className="mb-3 flex flex-wrap gap-2 items-end">
-        <input
-          className="border border-blue-200 focus:ring-2 focus:ring-blue-300 outline-none rounded-lg px-3 py-2 text-base shadow"
-          placeholder="🔍 ค้นหาชื่อร้านค้า..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          style={{ minWidth: 220 }}
-        />
-        <div className="flex items-center gap-1">
-          <span className="text-sm text-gray-600">วันที่เริ่ม</span>
+      <div className="mb-3 flex flex-wrap gap-2 items-end justify-between">
+        {/* Filter/Search Area */}
+        <div className="flex flex-wrap gap-2 items-end">
           <input
-            type="date"
-            max={today}
-            value={startDate}
-            onChange={e => {
-              setStartDate(e.target.value);
-              if (endDate < e.target.value) setEndDate(e.target.value);
-            }}
-            className="border border-gray-200 rounded px-2 py-1"
-            style={{minWidth:120}}
+            className="border border-blue-200 focus:ring-2 focus:ring-blue-300 outline-none rounded-lg px-3 py-2 text-base shadow"
+            placeholder="🔍 ค้นหาชื่อร้านค้า..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{ minWidth: 220 }}
           />
+          <div className="flex items-center gap-1">
+            <span className="text-sm text-gray-600">วันที่เริ่ม</span>
+            <input
+              type="date"
+              max={today}
+              value={startDate}
+              onChange={e => {
+                setStartDate(e.target.value);
+                if (endDate < e.target.value) setEndDate(e.target.value);
+              }}
+              className="border border-gray-200 rounded px-2 py-1"
+              style={{minWidth:120}}
+            />
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-sm text-gray-600">ถึง</span>
+            <input
+              type="date"
+              min={startDate}
+              max={today}
+              value={endDate}
+              onChange={e => setEndDate(e.target.value)}
+              className="border border-gray-200 rounded px-2 py-1"
+              style={{minWidth:120}}
+            />
+          </div>
+          <button
+            className="flex gap-1 items-center bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold shadow"
+            onClick={handleSearch}
+            disabled={!validEndDate || !validStartDate}
+          >
+            <Search size={18} /> ค้นหา
+          </button>
+          {!validEndDate && (
+            <span className="text-red-600 text-xs font-medium ml-2">
+              วันที่สิ้นสุดต้องไม่เร็วกว่าวันที่เริ่มต้น และไม่เกินวันนี้
+            </span>
+          )}
+          <span className="text-sm text-gray-500 ml-2">{pagination.total} ร้านค้า</span>
         </div>
-        <div className="flex items-center gap-1">
-          <span className="text-sm text-gray-600">ถึง</span>
-          <input
-            type="date"
-            min={startDate}
-            max={today}
-            value={endDate}
-            onChange={e => setEndDate(e.target.value)}
-            className="border border-gray-200 rounded px-2 py-1"
-            style={{minWidth:120}}
-          />
-        </div>
+        {/* Export Button */}
         <button
-          className="flex gap-1 items-center bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold shadow"
-          onClick={handleSearch}
-          disabled={!validEndDate || !validStartDate}
+          type="button"
+          className="flex gap-1 items-center bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-bold shadow"
+          onClick={() => handleExportAll({ search, startDate, endDate })}
         >
-          <Search size={18} /> ค้นหา
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4" />
+          </svg>
+          Export Excel
         </button>
-        {!validEndDate && (
-          <span className="text-red-600 text-xs font-medium ml-2">
-            วันที่สิ้นสุดต้องไม่เร็วกว่าวันที่เริ่มต้น และไม่เกินวันนี้
-          </span>
-        )}
-        <span className="text-sm text-gray-500 ml-2">{pagination.total} ร้านค้า</span>
       </div>
       <div className="overflow-x-auto bg-gradient-to-b from-blue-50 to-white rounded-3xl shadow-2xl border border-blue-100">
         <table className="min-w-[1200px] w-full text-sm border-separate border-spacing-0 rounded-3xl overflow-hidden">
