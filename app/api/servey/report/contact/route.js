@@ -14,13 +14,27 @@ export async function GET(req) {
     const limit = parseInt(searchParams.get("limit") || "20", 10);
     const search = searchParams.get("search") || "";
 
+    // NEW: อ่านช่วงวันที่จาก query
+    const startDate = searchParams.get("startDate"); // yyyy-mm-dd
+    const endDate = searchParams.get("endDate");     // yyyy-mm-dd
+
     // เงื่อนไข query
     const query = {
-      "market_info.demand": "buy"   // <<---- เฉพาะร้านที่ demand = "buy"
+      "market_info.demand": "buy"
     };
 
+    // Search ร้านค้า
     if (search) {
       query["store_info.store_name"] = { $regex: search, $options: "i" };
+    }
+
+    // Filter ช่วงวันที่ (ถ้ามี)
+    if (startDate && endDate) {
+      // ใช้เวลาตั้งแต่ 00:00:00 ถึง 23:59:59 ของวันสิ้นสุด
+      query.createdAt = {
+        $gte: new Date(startDate + "T00:00:00.000Z"),
+        $lte: new Date(endDate + "T23:59:59.999Z"),
+      };
     }
 
     const total = await Survey.countDocuments(query);
@@ -43,7 +57,7 @@ export async function GET(req) {
         d.store_info?.store_district,
         d.store_info?.store_province,
         d.store_info?.store_postcode
-      ].filter(Boolean).join(", "),
+        ].filter(Boolean).join(" "),
       lat: d.store_info?.location?.lat,
       lng: d.store_info?.location?.lng,
       interest_products: d.market_info?.interest_products || [],
