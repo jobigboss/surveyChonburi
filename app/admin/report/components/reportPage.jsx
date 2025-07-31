@@ -12,7 +12,6 @@ export default function ReportPage() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(100);
   const [total, setTotal] = useState(0);
-  const [activeTab, setActiveTab] = useState("Performance");
 
   const router = useRouter();
 
@@ -92,63 +91,15 @@ export default function ReportPage() {
   return (
     <div className="min-h-screen flex flex-col items-center bg-gray-100 p-6">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-6xl p-6">
-        <div className="flex gap-4 border-b border-gray-300 mb-4">
-          {['Performance', 'สินค้า', 'ผู้ติดต่อ'].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 font-semibold transition ${
-                activeTab === tab
-                  ? 'border-b-4 border-blue-500 text-blue-600'
-                  : 'text-gray-500 hover:text-blue-500'
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
 
-        <div className="flex justify-between items-center mb-4">
-          <h1 className="text-xl font-bold">รายงาน Survey</h1>
-          <button
-            onClick={() => router.push("/admin")}
-            className="flex items-center bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded-lg"
-          >
-            <ArrowLeft size={18} className="mr-2" /> กลับหน้าหลัก
-          </button>
-        </div>
+        {/* Header + กลับเมนูหลัก */}
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-2xl font-bold text-blue-800">รายงาน Survey</h1>
 
-        <div className="flex justify-between items-center mb-4">
-          <select
-            value={limit}
-            onChange={(e) => {
-              setLimit(Number(e.target.value));
-              setPage(1);
-            }}
-            className="border p-2 rounded-lg"
-          >
-            {[25, 50, 75, 100].map((n) => (
-              <option key={n} value={n}>{n} รายการ / หน้า</option>
-            ))}
-          </select>
-
-          <div className="space-x-2">
-            <button
-              disabled={page === 1}
-              onClick={() => setPage(page - 1)}
-              className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
-            >◀</button>
-            <span>หน้า {page} / {Math.ceil(dailyStats.length / limit)}</span>
-            <button
-              disabled={page * limit >= dailyStats.length}
-              onClick={() => setPage(page + 1)}
-              className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
-            >▶</button>
-          </div>
         </div>
 
         {/* Filter Section */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-gray-50 p-4 rounded-lg mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-gray-50 p-4 rounded-lg mb-6">
           <div>
             <label className="block text-sm mb-1">วันที่เริ่ม</label>
             <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="border rounded-lg p-2 w-full" />
@@ -226,6 +177,35 @@ export default function ReportPage() {
                 ))}
               </tbody>
             </table>
+
+            {/* Pagination */}
+            <div className="flex justify-between items-center mt-4">
+              <select
+                value={limit}
+                onChange={(e) => {
+                  setLimit(Number(e.target.value));
+                  setPage(1);
+                }}
+                className="border p-2 rounded-lg"
+              >
+                {[25, 50, 75, 100].map((n) => (
+                  <option key={n} value={n}>{n} รายการ / หน้า</option>
+                ))}
+              </select>
+              <div className="space-x-2">
+                <button
+                  disabled={page === 1}
+                  onClick={() => setPage(page - 1)}
+                  className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+                >◀</button>
+                <span>หน้า {page} / {Math.ceil(dailyStats.length / limit)}</span>
+                <button
+                  disabled={page * limit >= dailyStats.length}
+                  onClick={() => setPage(page + 1)}
+                  className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+                >▶</button>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -261,7 +241,6 @@ export default function ReportPage() {
                 ))}
               </tbody>
             </table>
-
             <div className="flex justify-end mt-4">
               <button
                 onClick={() => setSelectedDate(null)}
