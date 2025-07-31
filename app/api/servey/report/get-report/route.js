@@ -1,7 +1,7 @@
+// /api/servey/report/get-report.js
 import { NextResponse } from "next/server";
 import { connectMongoDB } from "../../../../../lib/mongodb";
 import Survey from "../../../../../models/survey";
-import User from "../../../../../models/user";
 
 export async function GET(req) {
   try {
@@ -12,11 +12,29 @@ export async function GET(req) {
     const limit = parseInt(searchParams.get("limit") || "50");
     const skip = (page - 1) * limit;
 
-    // นับจำนวนทั้งหมดก่อน
-    const total = await Survey.countDocuments();
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
+    const userId = searchParams.get("user_id");
 
-    // Query ด้วย aggregation + pagination
+    // === Filter Matching ===
+    const match = {};
+    if (userId) match.user_id = userId;
+    if (startDate || endDate) {
+      match.createdAt = {};
+      if (startDate) match.createdAt.$gte = new Date(startDate);
+      if (endDate) {
+        const e = new Date(endDate);
+        e.setHours(23, 59, 59);
+        match.createdAt.$lte = e;
+      }
+    }
+
+    // === Total for pagination ===
+    const total = await Survey.countDocuments(match);
+
+    // === Aggregate with filter + pagination ===
     const reports = await Survey.aggregate([
+      { $match: match },
       {
         $lookup: {
           from: "user",
@@ -25,12 +43,7 @@ export async function GET(req) {
           as: "userInfo"
         }
       },
-      {
-        $unwind: {
-          path: "$userInfo",
-          preserveNullAndEmptyArrays: true
-        }
-      },
+      { $unwind: { path: "$userInfo", preserveNullAndEmptyArrays: true } },
       {
         $project: {
           store_info: 1,
@@ -56,10 +69,6 @@ export async function GET(req) {
       limit
     });
   } catch (error) {
-    console.error("Error fetching reports:", error);
-    return NextResponse.json(
-      { success: false, message: "เกิดข้อผิดพลาด", error },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error }, { status: 500 });
   }
 }

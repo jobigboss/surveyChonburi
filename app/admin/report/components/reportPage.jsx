@@ -1,42 +1,50 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Loader2, ArrowLeft, Eye } from "lucide-react";
+import { Loader2, ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export default function ReportPage() {
   const [reports, setReports] = useState([]);
-  const [filteredReports, setFilteredReports] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedReport, setSelectedReport] = useState(null);
-  const router = useRouter();
+  const [selectedDate, setSelectedDate] = useState(null);
   const [productList, setProductList] = useState([]);
   const [fetchError, setFetchError] = useState("");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(100);
   const [total, setTotal] = useState(0);
+  const [activeTab, setActiveTab] = useState("Performance");
 
-  // ✅ Filter State
+  const router = useRouter();
+
+  // Filter State
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [selectedUser, setSelectedUser] = useState("");
+  const [province, setProvince] = useState("");
+  const [district, setDistrict] = useState("");
 
-  // ✅ โหลดข้อมูลรายงาน
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/servey/report/get-report?page=${page}&limit=${limit}`)
+
+    const queryParams = new URLSearchParams({});
+    if (startDate) queryParams.append("startDate", startDate);
+    if (endDate) queryParams.append("endDate", endDate);
+    if (selectedUser) queryParams.append("user_id", selectedUser);
+    if (province) queryParams.append("province", province);
+    if (district) queryParams.append("district", district);
+
+    fetch(`/api/servey/report/get-report?${queryParams.toString()}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
           setReports(data.reports);
-          setFilteredReports(data.reports);
-          setTotal(data.total);
+          setTotal(data.reports.length); // จำนวนวัน
         }
       })
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
-  }, [page, limit]);
+  }, [startDate, endDate, selectedUser, province, district]);
 
-  // ✅ โหลดข้อมูลสินค้า
   useEffect(() => {
     setFetchError("");
     fetch("/api/servey/get/product")
@@ -59,50 +67,47 @@ export default function ReportPage() {
       });
   }, []);
 
-  // ✅ ฟังก์ชันหา product
-  const findProduct = (id) => {
-    if (!id) return null;
-    return (
-      productList.find((p) => p.fmProID?.toUpperCase() === id.toUpperCase()) ||
-      null
-    );
-  };
-
-  // ✅ กรองรายงานตาม Filter
-  useEffect(() => {
-    let filtered = [...reports];
-
-    // กรองตามผู้คีย์
-    if (selectedUser) {
-      filtered = filtered.filter((r) => r.user_id === selectedUser);
-    }
-
-    // กรองตามวันที่
-    if (startDate || endDate) {
-      filtered = filtered.filter((r) => {
-        const reportDate = new Date(r.createdAt);
-        const sDate = startDate ? new Date(startDate) : null;
-        const eDate = endDate ? new Date(endDate) : null;
-
-        if (sDate && reportDate < sDate) return false;
-        if (eDate) {
-          eDate.setHours(23, 59, 59); // รวมทั้งวัน
-          if (reportDate > eDate) return false;
-        }
-        return true;
-      });
-    }
-
-    setFilteredReports(filtered);
-  }, [startDate, endDate, selectedUser, reports]);
-
-  // ✅ ดึงชื่อผู้คีย์ไม่ซ้ำ
   const uniqueUsers = [...new Set(reports.map((r) => r.user_id).filter(Boolean))];
+
+  const groupedByDate = reports.reduce((acc, report) => {
+    const date = new Date(report.createdAt).toLocaleDateString("th-TH");
+    if (!acc[date]) acc[date] = [];
+    acc[date].push(report);
+    return acc;
+  }, {});
+
+  const dailyStats = Object.entries(groupedByDate)
+    .map(([date, items]) => {
+      const approved = items.filter((r) => r.store_info?.permission === "อนุญาต").length;
+      const notApproved = items.filter((r) => r.store_info?.permission === "ไม่อนุญาต").length;
+      return { date, total: items.length, approved, notApproved, items };
+    })
+    .sort((a, b) => new Date(b.date.split('/').reverse().join('-')) - new Date(a.date.split('/').reverse().join('-')));
+
+  const paginatedStats = dailyStats.slice((page - 1) * limit, page * limit);
+
+  const avgTotal = (reports.length / dailyStats.length) || 0;
+  const avgApproved = (reports.filter((r) => r.store_info?.permission === "อนุญาต").length / reports.length) || 0;
 
   return (
     <div className="min-h-screen flex flex-col items-center bg-gray-100 p-6">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-6xl p-6">
-        {/* Header */}
+        <div className="flex gap-4 border-b border-gray-300 mb-4">
+          {['Performance', 'สินค้า', 'ผู้ติดต่อ'].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-4 py-2 font-semibold transition ${
+                activeTab === tab
+                  ? 'border-b-4 border-blue-500 text-blue-600'
+                  : 'text-gray-500 hover:text-blue-500'
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-xl font-bold">รายงาน Survey</h1>
           <button
@@ -113,19 +118,17 @@ export default function ReportPage() {
           </button>
         </div>
 
-        <div className="flex justify-between items-center mb-2">
+        <div className="flex justify-between items-center mb-4">
           <select
             value={limit}
             onChange={(e) => {
               setLimit(Number(e.target.value));
-              setPage(1); // reset ไปหน้าแรก
+              setPage(1);
             }}
             className="border p-2 rounded-lg"
           >
             {[25, 50, 75, 100].map((n) => (
-              <option key={n} value={n}>
-                {n} รายการ / หน้า
-              </option>
+              <option key={n} value={n}>{n} รายการ / หน้า</option>
             ))}
           </select>
 
@@ -134,54 +137,42 @@ export default function ReportPage() {
               disabled={page === 1}
               onClick={() => setPage(page - 1)}
               className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
-            >
-              ◀
-            </button>
-            <span>หน้า {page} / {Math.ceil(total / limit)}</span>
+            >◀</button>
+            <span>หน้า {page} / {Math.ceil(dailyStats.length / limit)}</span>
             <button
-              disabled={page * limit >= total}
+              disabled={page * limit >= dailyStats.length}
               onClick={() => setPage(page + 1)}
               className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
-            >
-              ▶
-            </button>
+            >▶</button>
           </div>
         </div>
 
-        {/* ✅ Filter */}
+        {/* Filter Section */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-gray-50 p-4 rounded-lg mb-4">
           <div>
             <label className="block text-sm mb-1">วันที่เริ่ม</label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="border rounded-lg p-2 w-full"
-            />
+            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="border rounded-lg p-2 w-full" />
           </div>
           <div>
             <label className="block text-sm mb-1">วันที่สิ้นสุด</label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="border rounded-lg p-2 w-full"
-            />
+            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="border rounded-lg p-2 w-full" />
           </div>
           <div>
             <label className="block text-sm mb-1">ผู้คีย์</label>
-            <select
-              value={selectedUser}
-              onChange={(e) => setSelectedUser(e.target.value)}
-              className="border rounded-lg p-2 w-full"
-            >
+            <select value={selectedUser} onChange={(e) => setSelectedUser(e.target.value)} className="border rounded-lg p-2 w-full">
               <option value="">-- ทั้งหมด --</option>
               {uniqueUsers.map((u, idx) => (
-                <option key={idx} value={u}>
-                  {u}
-                </option>
+                <option key={idx} value={u}>{u}</option>
               ))}
             </select>
+          </div>
+          <div>
+            <label className="block text-sm mb-1">จังหวัด</label>
+            <input type="text" value={province} onChange={(e) => setProvince(e.target.value)} className="border rounded-lg p-2 w-full" />
+          </div>
+          <div>
+            <label className="block text-sm mb-1">อำเภอ</label>
+            <input type="text" value={district} onChange={(e) => setDistrict(e.target.value)} className="border rounded-lg p-2 w-full" />
           </div>
           <div className="flex items-end">
             <button
@@ -189,165 +180,93 @@ export default function ReportPage() {
                 setStartDate("");
                 setEndDate("");
                 setSelectedUser("");
+                setProvince("");
+                setDistrict("");
+                setPage(1);
               }}
               className="bg-gray-300 hover:bg-gray-400 text-black px-4 py-2 rounded-lg w-full"
-            >
-              ล้างตัวกรอง
-            </button>
+            >ล้างตัวกรอง</button>
           </div>
         </div>
 
-        {/* ✅ Loading */}
+        {/* Summary Table */}
         {loading ? (
           <div className="flex justify-center items-center py-10">
-            <Loader2 className="animate-spin mr-2" size={24} />
-            กำลังโหลดข้อมูล...
+            <Loader2 className="animate-spin mr-2" size={24} /> กำลังโหลดข้อมูล...
           </div>
         ) : (
           <div className="overflow-x-auto">
+            <div className="mb-4 font-semibold text-sm">
+              ค่าเฉลี่ยร้านที่สำรวจ: {avgTotal.toFixed(2)} | อนุญาต: {avgApproved.toFixed(2)}
+            </div>
             <table className="w-full border border-gray-200 text-sm">
-              <thead>
-                <tr className="bg-gray-200 text-left">
-                  <th className="p-3 border">ลำดับ</th>
-                  <th className="p-3 border">ชื่อร้าน</th>
-                  <th className="p-3 border">สินค้าในระบบ</th>
-                  <th className="p-3 border">ความต้องการซื้อ</th>
-                  <th className="p-3 border">ผู้คีย์</th>
-                  <th className="p-3 border">วันที่บันทึก</th>
-                  <th className="p-3 border text-center">จัดการ</th>
+              <thead className="bg-gray-200">
+                <tr>
+                  <th className="p-2 border">วันที่</th>
+                  <th className="p-2 border">จำนวนร้าน</th>
+                  <th className="p-2 border">อนุญาต</th>
+                  <th className="p-2 border">ไม่อนุญาต</th>
+                  <th className="p-2 border">จัดการ</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredReports.length > 0 ? (
-                  filteredReports.map((r, i) => (
-                    <tr key={r._id} className="hover:bg-gray-50">
-                      <td className="p-3 border">{i + 1}</td>
-                      <td className="p-3 border">
-                        {r.store_info?.store_name || "-"}
-                      </td>
-                      <td className="p-3 border">{r.products?.length || 0}</td>
-                      <td className="p-3 border">
-                        {r.market_info?.demand || "-"}
-                      </td>
-                      <td className="p-3 border">{r.user_id || "-"}</td>
-                      <td className="p-3 border">
-                        {new Date(r.createdAt).toLocaleString("th-TH")}
-                      </td>
-                      <td className="p-3 border text-center">
-                        <button
-                          onClick={() => setSelectedReport(r)}
-                          className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg flex items-center gap-1"
-                        >
-                          <Eye size={16} /> ดูรายละเอียด
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="7" className="text-center p-4">
-                      ไม่มีข้อมูลรายงาน
+                {paginatedStats.map((d) => (
+                  <tr key={d.date} className="hover:bg-gray-50">
+                    <td className="p-2 border">{d.date}</td>
+                    <td className="p-2 border">{d.total}</td>
+                    <td className="p-2 border">{d.approved}</td>
+                    <td className="p-2 border">{d.notApproved}</td>
+                    <td className="p-2 border text-center">
+                      <button
+                        onClick={() => setSelectedDate(d)}
+                        className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded"
+                      >ดูรายละเอียด</button>
                     </td>
                   </tr>
-                )}
+                ))}
               </tbody>
             </table>
           </div>
         )}
       </div>
 
-      {/* ✅ Modal เดิม (แสดงรายละเอียด + ตารางสินค้า) */}
-      {selectedReport && (
+      {/* Detail Modal */}
+      {selectedDate && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-2xl overflow-y-auto max-h-[90vh]">
-            <h2 className="text-xl font-bold mb-4">รายละเอียด Survey</h2>
-            <div className="space-y-2 text-sm">
-              <p>
-                <strong>ชื่อร้าน:</strong>{" "}
-                {selectedReport.store_info?.store_name || "-"}
-              </p>
-              <p>
-                <strong>ที่อยู่:</strong>{" "}
-                {selectedReport.store_info?.location_address || "-"}
-              </p>
-              <p>
-                <strong>ผู้คีย์:</strong> {selectedReport.user_id || "-"}
-              </p>
-              <p>
-                <strong>ความต้องการซื้อ:</strong>{" "}
-                {selectedReport.market_info?.demand || "-"}
-              </p>
-              <p>
-                <strong>ที่มาของสินค้า:</strong>{" "}
-                {selectedReport.market_info?.reason || "-"}
-              </p>
-
-              {/* ตารางสินค้า */}
-              <h3 className="font-semibold mt-4">
-                สินค้าในระบบ ({selectedReport.products?.length || 0})
-              </h3>
-              <div className="overflow-x-auto mt-2">
-                <table className="w-full border border-gray-200 text-sm">
-                  <thead>
-                    <tr className="bg-gray-100 text-left">
-                      <th className="border p-2">#</th>
-                      <th className="border p-2">รหัสสินค้า</th>
-                      <th className="border p-2">ชื่อสินค้า</th>
-                      <th className="border p-2">ขนาด</th>
-                      <th className="border p-2">สถานะ</th>
-                      <th className="border p-2">ราคาแพ็ค</th>
-                      <th className="border p-2">ราคากล่อง</th>
-                      <th className="border p-2">ราคาลัง</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selectedReport.products && selectedReport.products.length > 0 ? (
-                      selectedReport.products.map((p, index) => {
-                        const product = findProduct(p.product_id);
-                        return (
-                          <tr key={index} className="hover:bg-gray-50">
-                            <td className="border p-2 text-center">
-                              {index + 1}
-                            </td>
-                            <td className="border p-2">{p.product_id || "-"}</td>
-                            <td className="border p-2">
-                              {product ? product.fmProName : "-"}
-                            </td>
-                            <td className="border p-2">
-                              {product ? product.fmProSize : "-"}
-                            </td>
-                            <td className="border p-2">{p.status || "-"}</td>
-                            <td className="border p-2">
-                              {p.pricePack ?? "-"}
-                            </td>
-                            <td className="border p-2">
-                              {p.priceBox ?? "-"}
-                            </td>
-                            <td className="border p-2">
-                              {p.priceCarton ?? "-"}
-                            </td>
-                          </tr>
-                        );
-                      })
-                    ) : (
-                      <tr>
-                        <td colSpan="8" className="text-center p-3">
-                          ไม่มีข้อมูลสินค้า
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <h2 className="text-lg font-semibold mb-4">ร้านที่บันทึกวันที่ {selectedDate.date}</h2>
+            <table className="w-full border border-gray-200 text-sm">
+              <thead className="bg-gray-100">
+                <tr>
+                  <th className="border p-2">ลำดับ</th>
+                  <th className="border p-2">ชื่อร้าน</th>
+                  <th className="border p-2">ขออนุญาตสำรวจร้าน</th>
+                  <th className="border p-2">ลักษณะร้าน</th>
+                  <th className="border p-2">ประเภทร้าน</th>
+                  <th className="border p-2">ที่มาของสินค้า</th>
+                  <th className="border p-2">สาเหตุที่ไม่อนุญาต</th>
+                </tr>
+              </thead>
+              <tbody>
+                {selectedDate.items.map((r, i) => (
+                  <tr key={r._id} className="hover:bg-gray-50">
+                    <td className="border p-2 text-center">{i + 1}</td>
+                    <td className="border p-2">{r.store_info?.store_name || "-"}</td>
+                    <td className="border p-2">{r.store_info?.permission || "-"}</td>
+                    <td className="border p-2">{r.store_info?.shop_size || "-"}</td>
+                    <td className="border p-2">{r.store_info?.special_type || "-"}</td>
+                    <td className="border p-2">{r.store_info?.reason || "-"}</td>
+                    <td className="border p-2">{r.store_info?.permission_reason || "-"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
 
             <div className="flex justify-end mt-4">
               <button
-                onClick={() => setSelectedReport(null)}
+                onClick={() => setSelectedDate(null)}
                 className="bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded-lg"
-              >
-                ปิด
-              </button>
+              >ปิด</button>
             </div>
           </div>
         </div>
