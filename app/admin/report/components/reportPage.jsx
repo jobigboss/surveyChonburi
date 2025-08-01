@@ -130,12 +130,12 @@ export default function ReportPage() {
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-6xl p-6">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-xl font-bold">รายงาน Survey</h1>
-          <button
+          {/* <button
             onClick={() => router.push("/admin")}
             className="flex items-center bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded-lg"
           >
             <ArrowLeft size={18} className="mr-2" /> กลับหน้าหลัก
-          </button>
+          </button> */}
         </div>
 
         <div className="flex justify-between items-center mb-4">
