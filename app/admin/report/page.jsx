@@ -5,11 +5,13 @@ import { ArrowLeft } from "lucide-react";
 import ReportPage from "./components/reportPage";
 import Contact from "./components/Contact";
 import Product from "./components/Product";
+import Summary from "./components/summary";
 
 const tabs = [
   { key: "performance", label: "Performance" },
   { key: "product", label: "สินค้า" },
   { key: "contact", label: "ผู้ติดต่อ" },
+  { key: "summary", label: "สรุปงาน" },
 ];
 
 export default function ReportTabs() {
@@ -70,6 +72,11 @@ export default function ReportTabs() {
           <div>
             <Contact/>
           
+          </div>
+        )}
+          {activeTab === "summary" && (
+          <div>
+            <Summary />
           </div>
         )}
       </div>
