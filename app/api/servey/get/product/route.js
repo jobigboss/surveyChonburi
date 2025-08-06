@@ -7,7 +7,7 @@ import Product from "../../../../../models/product";
 export async function GET() {
     try {
         await connectMongoDB();
-        const products = await Product.find({});
+        const products = await Product.find({}).sort({ fmProID: 1 });
         console.log("Fetched Products:", products);
         return NextResponse.json(products);
     } catch (error) {
