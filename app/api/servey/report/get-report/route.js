@@ -88,6 +88,11 @@ export async function GET(req) {
               _id: "$_id",
               surID: "$surID",
               store_info: "$store_info",
+              market_info: {
+                reason: "$market_info.reason",
+                demand: "$market_info.demand"},
+              statusFMFR:"$statusFMFR",
+              statusOMG:"$statusOMG",
               user_id: "$user_id",
               createdAt: "$createdAt",
             },

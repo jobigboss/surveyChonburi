@@ -24,17 +24,20 @@ export async function GET() {
       },
       {
         $group: {
-          _id: { zone: "$zone", province: "$province" },
-          districts: { $addToSet: "$district" }
+          _id: {
+            province: "$province",
+            district: "$district",
+            zone: "$zone"
+          }
         }
       },
       {
         $group: {
-          _id: "$_id.zone",
-          provinces: {
+          _id: "$_id.province",
+          districts: {
             $push: {
-              province: "$_id.province",
-              districts: "$districts"
+              name: "$_id.district",
+              zone: "$_id.zone"
             }
           }
         }
@@ -42,16 +45,16 @@ export async function GET() {
       {
         $project: {
           _id: 0,
-          zone: "$_id",
-          provinces: 1
+          province: "$_id",
+          districts: 1
         }
       },
-      { $sort: { zone: 1 } }
+      { $sort: { province: 1 } }
     ]);
 
-    return NextResponse.json(result); // ✅ return เป็น array
+    return NextResponse.json(result);
   } catch (error) {
-    console.error("Error fetching province grouping:", error);
+    console.error("Error fetching province data:", error);
     return NextResponse.json(
       { message: "Error fetching province data", error },
       { status: 500 }

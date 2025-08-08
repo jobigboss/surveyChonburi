@@ -56,7 +56,7 @@ export default function ReportPage() {
       })
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
-  }, [startDate, endDate, selectedUser, selectedProvince, selectedDistrict]);
+  }, [startDate, endDate, selectedUser, selectedProvince, selectedDistrict, zone]);
 
   useEffect(() => {
     fetch("/api/servey/report/get-report-province")
@@ -125,6 +125,17 @@ export default function ReportPage() {
     );
   };
 
+  const renderDistrictOptions = () => {
+    const provinceObj = zoneData.find(p => p.province === selectedProvince);
+    if (!provinceObj) return [];
+
+    return provinceObj.districts
+      .filter(d => !zone || d.zone === zone)
+      .map((d, idx) => (
+        <option key={idx} value={d.name}>{d.name}</option>
+      ));
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center bg-gray-100 p-6">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-6xl p-6">
@@ -188,44 +199,52 @@ export default function ReportPage() {
               ))}
             </select>
           </div>
+
           <div>
-            <label className="block text-sm mb-1">โซน</label>
-            <select value={zone} onChange={(e) => {
-              setZone(e.target.value);
-              setSelectedProvince("");
-              setSelectedDistrict("");
-            }} className="border rounded-lg p-2 w-full">
+            <label className="block text-sm mb-1">จังหวัด</label>
+            <select
+              value={selectedProvince}
+              onChange={(e) => {
+                setSelectedProvince(e.target.value);
+                setSelectedDistrict("");
+              }}
+              className="border rounded-lg p-2 w-full"
+            >
               <option value="">-- ทั้งหมด --</option>
-              {Array.isArray(zoneData) &&
-                zoneData.map((z) => (
-                  <option key={z.zone} value={z.zone}>{z.zone}</option>
+              {Array.from(new Set(zoneData.map(p => p.province)))
+                .filter(Boolean)
+                .sort()
+                .map((province, index) => (
+                  <option key={`${province}-${index}`} value={province}>{province}</option>
               ))}
             </select>
           </div>
 
           <div>
-            <label className="block text-sm mb-1">จังหวัด</label>
-            <select value={selectedProvince} onChange={(e) => {
-              setSelectedProvince(e.target.value);
-              setSelectedDistrict("");
-            }} className="border rounded-lg p-2 w-full">
+            <label className="block text-sm mb-1">โซน</label>
+            <select
+              value={zone}
+              onChange={(e) => setZone(e.target.value)}
+              className="border rounded-lg p-2 w-full"
+            >
               <option value="">-- ทั้งหมด --</option>
-              {zoneData.find((z) => z.zone === zone)?.provinces.map((p) => (
-                <option key={p.province} value={p.province}>{p.province}</option>
-              ))}
+              {(() => {
+                const provinceObj = zoneData.find(p => p.province === selectedProvince);
+                const zones = provinceObj ? [...new Set(provinceObj.districts.map(d => d.zone))] : [];
+                return zones.map((z, idx) => <option key={idx} value={z}>{z}</option>);
+              })()}
             </select>
           </div>
 
           <div>
             <label className="block text-sm mb-1">อำเภอ</label>
-            <select value={selectedDistrict} onChange={(e) => setSelectedDistrict(e.target.value)} className="border rounded-lg p-2 w-full">
+            <select
+              value={selectedDistrict}
+              onChange={(e) => setSelectedDistrict(e.target.value)}
+              className="border rounded-lg p-2 w-full"
+            >
               <option value="">-- ทั้งหมด --</option>
-              {zoneData
-                .find((z) => z.zone === zone)
-                ?.provinces.find((p) => p.province === selectedProvince)
-                ?.districts.map((d) => (
-                  <option key={d} value={d}>{d}</option>
-                ))}
+              {renderDistrictOptions()}
             </select>
           </div>
           <div className="flex items-end">
@@ -345,13 +364,17 @@ export default function ReportPage() {
               <thead className="bg-gray-100">
                 <tr>
                   <th className="border p-2">ลำดับ</th>
+                  <th className="border p-2">รหัสร้าน</th>
                   <th className="border p-2">ชื่อร้าน</th>
+                  <th className="border p-2">บ้านเลขที่</th>
                   <th className="border p-2">ขออนุญาตสำรวจร้าน</th>
                   <th className="border p-2">ลักษณะร้าน</th>
                   <th className="border p-2">ประเภทร้าน</th>
                   <th className="border p-2">รูปหน้าร้าน</th>
                   <th className="border p-2">รูปตู้แช่</th>
                   <th className="border p-2">รูปชั้นวาง</th>
+                  <th className="border p-2">สถานะ FMFR</th>
+                  <th className="border p-2">สถานะ OMG</th>
                   <th className="border p-2">ที่มาของสินค้า</th>
                   <th className="border p-2">สาเหตุที่ไม่อนุญาต</th>
                   
@@ -361,7 +384,9 @@ export default function ReportPage() {
                 {selectedDate.items.map((r, i) => (
                   <tr key={r._id} className="hover:bg-gray-50">
                     <td className="border p-2 text-center">{i + 1}</td>
+                    <td className="border p-2">{r.surID || "-"}</td>
                     <td className="border p-2">{r.store_info?.store_name || "-"}</td>
+                    <td className="border p-2">{r.store_info?.store_number_address || "-"}</td>
                     <td className="border p-2">{r.store_info?.permission || "-"}</td>
                     <td className="border p-2">{r.store_info?.shop_size || "-"}</td>
                     <td className="border p-2">{r.store_info?.special_type || "-"}</td>
@@ -393,6 +418,8 @@ export default function ReportPage() {
                         />
                       ) : "-"}
                     </td>
+                    <td className="border p-2">{r.statusFMFR || "-"}</td>
+                    <td className="border p-2">{r.statusOMG || "-"}</td>
                     <td className="border p-2">{r.market_info?.reason || "-"}</td>
                     <td className="border p-2">
                       {REASONS.find(rsn => rsn.value === r.store_info?.permission_reason)?.label || "-"}
